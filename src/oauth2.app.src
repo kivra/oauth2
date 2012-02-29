@@ -1,0 +1,8 @@
+{application, oauth2,
+ [{description, "Erlang OAuth2"},
+  {vsn, "0.1.0"},
+  {modules, []},
+  {registered, []},
+  {applications, [stdlib]},
+  {env, []}]}.
+
