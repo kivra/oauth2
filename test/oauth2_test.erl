@@ -42,7 +42,10 @@ oauth2_test_() ->
                         ?assertEqual(Au, proplists:get_value("code", F2)),
                         ?assert(check_expire(T, 30)),
                         ?assertNot(check_expire(T, 40)),
-                        
+                        B = oauth2:verify_token(access_token, oauth2_mock_db,
+                                                Au, ClientId),
+                        ?assertMatch({ok, _}, B),
+
                         %% "offline" authorization
                         oauth2:authorize(token, oauth2_mock_db, ClientId,
                                              RedirectUri, Scope, State, AccessType),

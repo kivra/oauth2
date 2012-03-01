@@ -16,12 +16,15 @@ authorize(ResponseType, Db, ClientId, RedirectUri, Scope, State, _AccessType) ->
                       expires=seconds_since_epoch(?DEF_AUTH_TOKEN_EXPIRE),
                       scope=Scope},
     Key = generate_key(ClientId, AuthCode),
-    Db:set(Key, Data),
+    case ResponseType of
+        token -> Db:set(access, Key, Data);
+        code -> Db:set(auth, Key, Data)
+    end,
     NewRedirectUri = get_redirect_uri(ResponseType, AuthCode, RedirectUri, State),
     {ok, AuthCode, NewRedirectUri, Data#oauth2_db.expires}.
 
 verify_token(access_token, Db, Token, ClientId) ->
-    case Db:get(generate_key(ClientId, Token)) of
+    case Db:get(access, generate_key(ClientId, Token)) of
         {ok, Data} ->
             ClientId = Data#oauth2_db.client_id,
             Expires = Data#oauth2_db.expires,
