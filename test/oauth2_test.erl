@@ -43,6 +43,15 @@ oauth2_test_() ->
                         B = oauth2:verify_token(access_token, oauth2_mock_db,
                                                 Au, ClientId),
                         ?assertMatch({ok, _}, B),
+                        Value = {oauth2,"123abcABC",1330632816,"This That"},
+                        Token = "123",
+                        oauth2_mock_db:set(access, ClientId++"#"++Token, Value),
+                        C = oauth2:verify_token(access_token, oauth2_mock_db,
+                                                Token, ClientId),
+                        ?assertEqual(C, {error, invalid_token}),
+                        %D = oauth2:authorize(code, oauth2_mock_db, ClientId++1,
+                                             %RedirectUri, Scope, State),
+                        
 
                         oauth2_mock_db:delete_table()
                 end 

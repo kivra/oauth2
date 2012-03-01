@@ -5,8 +5,6 @@
 behaviour_info(callbacks) ->
     [{get, 2},
      {set, 3},
-     {delete, 2}];
-behaviour_info(_) ->
-    undefined.
-
+     {delete, 2},
+     {verify_redirect_uri, 2}].
 

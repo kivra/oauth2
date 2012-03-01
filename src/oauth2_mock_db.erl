@@ -1,6 +1,10 @@
 -module(oauth2_mock_db).
 
 -export([get/2, set/3, delete/2]).
+-export([verify_redirect_uri/2]).
+
+%% 
+%% Non behavioral functions
 -export([init/0, delete_table/0]).
 
 -define(TAB_AUTH, auth).
@@ -22,6 +26,10 @@ delete(auth, Key) ->
     delete_tab(?TAB_AUTH, Key);
 delete(access, Key) ->
     delete_tab(?TAB_ACC, Key).
+
+verify_redirect_uri(_, _) ->
+    true.
+
 %%
 %% Non behavioral functions
 delete_tab(Table, Key) ->

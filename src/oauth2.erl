@@ -6,22 +6,27 @@
 -define(DEF_AUTH_TOKEN_EXPIRE, 30).
 
 -record(oauth2, {client_id :: string(),
-                    expires :: non_neg_integer(),
-                    scope :: list(string())
-                   }).
+                 expires :: non_neg_integer(),
+                 scope :: list(string())
+                }).
 
 authorize(ResponseType, Db, ClientId, RedirectUri, Scope, State) ->
-    AuthCode = generate_auth_code(),
-    Data = #oauth2{client_id=ClientId,
-                      expires=seconds_since_epoch(?DEF_AUTH_TOKEN_EXPIRE),
-                      scope=Scope},
-    Key = generate_key(ClientId, AuthCode),
-    case ResponseType of
-        token -> Db:set(access, Key, Data);
-        code -> Db:set(auth, Key, Data)
-    end,
-    NewRedirectUri = get_redirect_uri(ResponseType, AuthCode, RedirectUri, State),
-    {ok, AuthCode, NewRedirectUri, calculate_expires_in(Data#oauth2.expires)}.
+    case Db:verify_redirect_uri(ClientId, RedirectUri) of
+        false ->
+            {error, redirect_uri_mismatch};
+        true ->
+            AuthCode = generate_auth_code(),
+            Data = #oauth2{client_id=ClientId,
+                           expires=seconds_since_epoch(?DEF_AUTH_TOKEN_EXPIRE),
+                           scope=Scope},
+            Key = generate_key(ClientId, AuthCode),
+            case ResponseType of
+                token -> Db:set(access, Key, Data);
+                code -> Db:set(auth, Key, Data)
+            end,
+            NewRedirectUri = get_redirect_uri(ResponseType, AuthCode, RedirectUri, State),
+            {ok, AuthCode, NewRedirectUri, calculate_expires_in(Data#oauth2.expires)}
+    end.
 
 verify_token(access_token, Db, Token, ClientId) ->
     case Db:get(access, generate_key(ClientId, Token)) of
@@ -29,8 +34,15 @@ verify_token(access_token, Db, Token, ClientId) ->
             ClientId = Data#oauth2.client_id,
             Expires = Data#oauth2.expires,
             Scope = Data#oauth2.scope,
-            {ok, [{audience, ClientId}, {scope, Scope},
-                  {expires_in, calculate_expires_in(Expires)}]};
+
+            case calculate_expires_in(Expires) > 0 of
+                false ->
+                    Db:delete(access,  generate_key(ClientId, Token)),
+                    {error, invalid_token};
+                true ->
+                    {ok, [{audience, ClientId}, {scope, Scope},
+                          {expires_in, calculate_expires_in(Expires)}]}
+            end;
         _ ->
             {error, invalid_token}
     end.
