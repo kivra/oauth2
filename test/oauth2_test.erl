@@ -24,10 +24,8 @@ oauth2_test_() ->
                         Scope = "This That",
                         State = "",
                         %State2 = "Just a little state",
-                        AccessType = offline,
                         ClientId = "123abcABC",
 
-                        %% Standard "online" authorization
                         A = oauth2:authorize(token, oauth2_mock_db, ClientId,
                                              RedirectUri, Scope, State),
                         ?assertMatch({ok, _, _, _}, A),
@@ -40,24 +38,15 @@ oauth2_test_() ->
                         ?assertEqual(P, P2),
                         ?assertEqual(Q, Q2),
                         ?assertEqual(Au, proplists:get_value("code", F2)),
-                        ?assert(check_expire(T, 30)),
-                        ?assertNot(check_expire(T, 40)),
+                        ?assertEqual(T, 30),
+                        ?assertNotEqual(T, 40),
                         B = oauth2:verify_token(access_token, oauth2_mock_db,
                                                 Au, ClientId),
                         ?assertMatch({ok, _}, B),
 
-                        %% "offline" authorization
-                        oauth2:authorize(token, oauth2_mock_db, ClientId,
-                                             RedirectUri, Scope, State, AccessType),
-                        oauth2_mock_db:delete_table(),
-                        ok
+                        oauth2_mock_db:delete_table()
                 end 
             }
         ]
     }.
-
-check_expire(Base, Diff) ->
-    {Mega, Secs, _Micro} = now(),
-    Diff2 = Mega * 1000000 + Secs + Diff,
-    Diff2 =:= Base.
 

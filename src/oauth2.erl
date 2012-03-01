@@ -1,18 +1,18 @@
 -module(oauth2).
 
--export([authorize/6, authorize/7]).
+-export([authorize/6]).
 -export([verify_token/4]).
-
--include_lib("include/oauth2.hrl").
 
 -define(DEF_AUTH_TOKEN_EXPIRE, 30).
 
-authorize(ResponseType, D, C, R, Sc, St) ->
-    authorize(ResponseType, D, C, R, Sc, St, online).
+-record(oauth2, {client_id :: string(),
+                    expires :: non_neg_integer(),
+                    scope :: list(string())
+                   }).
 
-authorize(ResponseType, Db, ClientId, RedirectUri, Scope, State, _AccessType) ->
+authorize(ResponseType, Db, ClientId, RedirectUri, Scope, State) ->
     AuthCode = generate_auth_code(),
-    Data = #oauth2_db{client_id=ClientId,
+    Data = #oauth2{client_id=ClientId,
                       expires=seconds_since_epoch(?DEF_AUTH_TOKEN_EXPIRE),
                       scope=Scope},
     Key = generate_key(ClientId, AuthCode),
@@ -21,16 +21,16 @@ authorize(ResponseType, Db, ClientId, RedirectUri, Scope, State, _AccessType) ->
         code -> Db:set(auth, Key, Data)
     end,
     NewRedirectUri = get_redirect_uri(ResponseType, AuthCode, RedirectUri, State),
-    {ok, AuthCode, NewRedirectUri, Data#oauth2_db.expires}.
+    {ok, AuthCode, NewRedirectUri, calculate_expires_in(Data#oauth2.expires)}.
 
 verify_token(access_token, Db, Token, ClientId) ->
     case Db:get(access, generate_key(ClientId, Token)) of
         {ok, Data} ->
-            ClientId = Data#oauth2_db.client_id,
-            Expires = Data#oauth2_db.expires,
-            Scope = Data#oauth2_db.scope,
+            ClientId = Data#oauth2.client_id,
+            Expires = Data#oauth2.expires,
+            Scope = Data#oauth2.scope,
             {ok, [{audience, ClientId}, {scope, Scope},
-                  {expires, Expires}]};
+                  {expires_in, calculate_expires_in(Expires)}]};
         _ ->
             {error, invalid_token}
     end.
@@ -72,6 +72,9 @@ rnd_auth(Len, C) ->
     [rnd_auth(C)|rnd_auth(Len-1, C)].
 rnd_auth(C) ->
     element(random:uniform(tuple_size(C)), C).
+
+calculate_expires_in(Expire) ->
+    Expire - seconds_since_epoch(0).
 
 seconds_since_epoch(Diff) ->
     {Mega, Secs, _Micro} = now(),
