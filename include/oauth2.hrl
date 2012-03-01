@@ -12,8 +12,13 @@
                  grant_type :: string(),
                  access_token :: string(),
                  refresh_token :: string(),
-                 expires_in :: non_neg_integer(),
+                 expires :: non_neg_integer(),
                  token_type :: string(),
                  error :: atom()
              }).
+
+-record(oauth2_db, {client_id :: string(),
+                    expires :: non_neg_integer(),
+                    scope :: list(string())
+                   }).
 

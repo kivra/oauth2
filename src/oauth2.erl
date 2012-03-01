@@ -1,45 +1,66 @@
 -module(oauth2).
 
--export([is_authenticated/1, verify_token/2, is_perm_granted/2, get_auth_code/1]).
+-export([authorize/6, authorize/7]).
+-export([verify_token/4]).
 
--include_lib("oauth2/include/oauth2.hrl").
+-include_lib("include/oauth2.hrl").
 
-is_authenticated(Req) when is_list(Req) ->
-    Request = proplist_to_rec(Req, #oauth2{}),
-    validate_client_id(Request#oauth2.client_id),
-    validate_redirect_uri(Request#oauth2.redirect_uri),
-    %{error, authorize_invalid_header};
-    case Request#oauth2.error of
-        undefined -> ok;
-        "access_denied" -> {error, access_denied};
-        _ -> {error, authorize_invalid_header}
-    end;
-is_authenticated(_) ->
-    {error, bad_arg}.
+-define(DEF_AUTH_TOKEN_EXPIRE, 30).
 
-is_perm_granted(_, _) ->
-    true.
+authorize(ResponseType, D, C, R, Sc, St) ->
+    authorize(ResponseType, D, C, R, Sc, St, online).
 
-get_auth_code(_ClientId) ->
+authorize(ResponseType, Db, ClientId, RedirectUri, Scope, State, _AccessType) ->
     AuthCode = generate_auth_code(),
-    %%Save Auth Code for ClientId
-    AuthCode.
+    Data = #oauth2_db{client_id=ClientId,
+                      expires=seconds_since_epoch(?DEF_AUTH_TOKEN_EXPIRE),
+                      scope=Scope},
+    Key = generate_key(ClientId, AuthCode),
+    Db:set(Key, Data),
+    NewRedirectUri = get_redirect_uri(ResponseType, AuthCode, RedirectUri, State),
+    {ok, AuthCode, NewRedirectUri, Data#oauth2_db.expires}.
 
-verify_token(access_token, Token) ->
-    %% TODO check token
-    case Token of
-        "hej" ->
-            {ok, [{audience, "Client ID"}, {scope, "Which scope"},
-                  {expires_in, "secs"}]};
+verify_token(access_token, Db, Token, ClientId) ->
+    case Db:get(generate_key(ClientId, Token)) of
+        {ok, Data} ->
+            ClientId = Data#oauth2_db.client_id,
+            Expires = Data#oauth2_db.expires,
+            Scope = Data#oauth2_db.scope,
+            {ok, [{audience, ClientId}, {scope, Scope},
+                  {expires, Expires}]};
         _ ->
             {error, invalid_token}
     end.
 
 %% Internal API
 %%
+get_redirect_uri(Type, Code, Uri, State) ->
+    {S, N, P, Q, _} = mochiweb_util:urlsplit(Uri),
+    State2 = case State of
+        undefined -> [];
+        "" -> [];
+        StateVal -> [{state, StateVal}]
+    end,
+    Q2 = mochiweb_util:parse_qs(Q),
+    CF = [{code, Code}],
+    case Type of
+        token ->
+            Q3 = lists:append([State2, Q2]),
+            CF2 = mochiweb_util:urlencode(CF),
+            Query = mochiweb_util:urlencode(Q3),
+            mochiweb_util:urlunsplit({S, N, P, Query, CF2});
+        code ->
+            Q3 = lists:append([CF, State2, Q2]),
+            Query = mochiweb_util:urlencode(Q3),
+            mochiweb_util:urlunsplit({S, N, P, Query, ""})
+    end.
+
+generate_key(ClientId, AuthCode) ->
+    lists:flatten([ClientId, "#", AuthCode]).
 
 generate_auth_code() ->
-    Chars = list_to_tuple("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-&/"),
+    Chars = list_to_tuple("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-"),
+    random:seed(now()),
     rnd_auth(30, Chars).
 
 rnd_auth(0, _) ->
@@ -49,49 +70,7 @@ rnd_auth(Len, C) ->
 rnd_auth(C) ->
     element(random:uniform(tuple_size(C)), C).
 
-validate_client_id(undefined) ->
-    {error, wrong_client_id};
-validate_client_id(_ClientId) ->
-    true.
-
-validate_redirect_uri(undefined) ->
-    {error, wrong_redirect_uri};
-validate_redirect_uri(_RedirectUri) ->
-    true.
-
-proplist_to_rec([], Acc) ->
-    Acc;
-proplist_to_rec([{HH, HT}|T], Acc) ->
-    proplist_to_rec(T, set_rec(list_to_existing_atom(HH), HT, Acc)).
-
-set_rec(response_type, Value, Rec) ->
-    Rec#oauth2{response_type=Value};
-set_rec(client_id, Value, Rec) ->
-    Rec#oauth2{client_id=Value};
-set_rec(redirect_uri, Value, Rec) ->
-    Rec#oauth2{redirect_uri=Value};
-set_rec(scope, Value, Rec) ->
-    Rec#oauth2{scope=Value};
-set_rec(state, Value, Rec) ->
-    Rec#oauth2{state=Value};
-set_rec(access_type, Value, Rec) ->
-    Rec#oauth2{access_type=Value};
-set_rec(approval_prompt, Value, Rec) ->
-    Rec#oauth2{approval_prompt=Value};
-set_rec(code, Value, Rec) ->
-    Rec#oauth2{code=Value};
-set_rec(client_secret, Value, Rec) ->
-    Rec#oauth2{client_secret=Value};
-set_rec(grant_type, Value, Rec) ->
-    Rec#oauth2{grant_type=Value};
-set_rec(access_token, Value, Rec) ->
-    Rec#oauth2{access_token=Value};
-set_rec(refresh_token, Value, Rec) ->
-    Rec#oauth2{refresh_token=Value};
-set_rec(expires_in, Value, Rec) ->
-    Rec#oauth2{expires_in=Value};
-set_rec(error, Value, Rec) ->
-    Rec#oauth2{error=Value};
-set_rec(token_type, Value, Rec) ->
-    Rec#oauth2{token_type=Value}.
+seconds_since_epoch(Diff) ->
+    {Mega, Secs, _Micro} = now(),
+    Mega * 1000000 + Secs + Diff.
 
