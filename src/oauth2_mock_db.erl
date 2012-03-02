@@ -3,6 +3,8 @@
 -export([get/2, set/3, delete/2]).
 -export([verify_redirect_uri/2]).
 
+-include_lib("include/oauth2.hrl").
+
 %% 
 %% Non behavioral functions
 -export([init/0, delete_table/0]).

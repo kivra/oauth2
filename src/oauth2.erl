@@ -1,31 +1,38 @@
 -module(oauth2).
 
 -export([authorize/6]).
--export([verify_token/4]).
+-export([verify_token/4, verify_token/5]).
 
--define(DEF_AUTH_TOKEN_EXPIRE, 30).
+-include_lib("include/oauth2.hrl").
 
--record(oauth2, {client_id :: string(),
-                 expires :: non_neg_integer(),
-                 scope :: list(string())
-                }).
+-define(DEF_AUTH_CODE_EXPIRE, 30).
+-define(DEF_ACCESS_TOKEN_EXPIRE, 60 * 60 *2).
 
 authorize(ResponseType, Db, ClientId, RedirectUri, Scope, State) ->
     case Db:verify_redirect_uri(ClientId, RedirectUri) of
         false ->
             {error, redirect_uri_mismatch};
         true ->
-            AuthCode = generate_auth_code(),
-            Data = #oauth2{client_id=ClientId,
-                           expires=seconds_since_epoch(?DEF_AUTH_TOKEN_EXPIRE),
-                           scope=Scope},
-            Key = generate_key(ClientId, AuthCode),
-            case ResponseType of
-                token -> Db:set(access, Key, Data);
-                code -> Db:set(auth, Key, Data)
+            {Code, Expires} = case ResponseType of
+                token ->
+                    Data = #oauth2{client_id=ClientId,
+                                   expires=seconds_since_epoch(?DEF_ACCESS_TOKEN_EXPIRE),
+                                   scope=Scope},
+                    AccessToken = generate_access_token(Data#oauth2.expires),
+                    Key = generate_key(ClientId, AccessToken),
+                    Db:set(access, Key, Data),
+                    {AccessToken, Data#oauth2.expires};
+                code ->
+                    Data = #oauth2{client_id=ClientId,
+                                   expires=seconds_since_epoch(?DEF_AUTH_CODE_EXPIRE),
+                                   scope=Scope},
+                    AuthCode = generate_auth_code(),
+                    Key = generate_key(ClientId, AuthCode),
+                    Db:set(auth, Key, Data),
+                    {AuthCode, Data#oauth2.expires}
             end,
-            NewRedirectUri = get_redirect_uri(ResponseType, AuthCode, RedirectUri, State),
-            {ok, AuthCode, NewRedirectUri, calculate_expires_in(Data#oauth2.expires)}
+            NewRedirectUri = get_redirect_uri(ResponseType, Code, RedirectUri, State),
+            {ok, Code, NewRedirectUri, calculate_expires_in(Expires)}
     end.
 
 verify_token(access_token, Db, Token, ClientId) ->
@@ -40,19 +47,60 @@ verify_token(access_token, Db, Token, ClientId) ->
                     Db:delete(access,  generate_key(ClientId, Token)),
                     {error, invalid_token};
                 true ->
-                    {ok, [{audience, ClientId}, {scope, Scope},
-                          {expires_in, calculate_expires_in(Expires)}]}
+                    {ok, [{audience, ClientId},
+                          {scope, Scope},
+                          {expires_in, calculate_expires_in(Expires)}
+                         ]}
             end;
         _ ->
             {error, invalid_token}
-    end.
+    end;
+verify_token(_, _Db, _Token, _ClientId) ->
+    {error, invalid_token}.
+
+verify_token(authorization_code, Db, Token, ClientId, RedirectUri) ->
+    case Db:verify_redirect_uri(ClientId, RedirectUri) of
+        false ->
+            {error, redirect_uri_mismatch};
+        true ->
+            case Db:get(auth, generate_key(ClientId, Token)) of
+                {ok, Data} ->
+                    ClientId = Data#oauth2.client_id,
+                    Expires = Data#oauth2.expires,
+                    Scope = Data#oauth2.scope,
+                    Db:delete(auth,  generate_key(ClientId, Token)),
+
+                    case calculate_expires_in(Expires) > 0 of
+                        false ->
+                            {error, invalid_grant};
+                        true ->
+                            AccessToken = generate_access_token(Expires),
+                            AccessData = #oauth2{client_id=ClientId,
+                                                 expires=seconds_since_epoch(?DEF_ACCESS_TOKEN_EXPIRE),
+                                                 scope=Scope},
+                            Key = generate_key(ClientId, AccessToken),
+                            Db:set(access, Key, AccessData),
+
+                            {ok, [{access_token, AccessToken},
+                                  {token_type, "Bearer"},
+                                  {expires_in, calculate_expires_in(AccessData#oauth2.expires)}
+                                 ]}
+                    end;
+                _ ->
+                    {error, invalid_grant}
+            end
+    end;
+verify_token(_, _Db, _Token, _ClientId, _RedirectUri) ->
+    {error, invalid_token}.
 
 %% Internal API
 %%
 get_redirect_uri(Type, Code, Uri, State) ->
+    get_redirect_uri(Type, Code, Uri, State, []).
+
+get_redirect_uri(Type, Code, Uri, State, _ExtraQuery) ->
     {S, N, P, Q, _} = mochiweb_util:urlsplit(Uri),
     State2 = case State of
-        undefined -> [];
         "" -> [];
         StateVal -> [{state, StateVal}]
     end,
@@ -73,10 +121,18 @@ get_redirect_uri(Type, Code, Uri, State) ->
 generate_key(ClientId, AuthCode) ->
     lists:flatten([ClientId, "#", AuthCode]).
 
+generate_access_token(Expires) ->
+    S1 = generate_rnd_chars(15),
+    S2 = generate_rnd_chars(15),
+    S1++"."++integer_to_list(Expires)++"."++S2.
+
 generate_auth_code() ->
+    generate_rnd_chars(30).
+
+generate_rnd_chars(N) ->
     Chars = list_to_tuple("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-"),
     random:seed(now()),
-    rnd_auth(30, Chars).
+    rnd_auth(N, Chars).
 
 rnd_auth(0, _) ->
     [];
