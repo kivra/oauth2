@@ -3,18 +3,16 @@
 -include_lib("eunit/include/eunit.hrl").
 
 oauth2_test_() ->
-    {foreach,
+    {foreach, local,
         fun() ->
-                ok
+                oauth2_mock_db:init()
         end,
         fun(_) ->
-                ok
+                oauth2_mock_db:delete_table()
         end,
         [
             {"web server (authentication code flow)",
                 fun() ->
-                        oauth2_mock_db:init(),
-
                         RedirectUri = "http://REDIRECT.URL/here?this=that",
                         Scope = "This That",
                         State = [],
@@ -59,15 +57,11 @@ oauth2_test_() ->
                         %% Check invalid call
                         ?assertEqual({error, invalid_token},
                                      oauth2:verify_token(invalid, oauth2_mock_db,
-                                                         "123", ClientId, RedirectUri)),
-
-                        oauth2_mock_db:delete_table()
+                                                         "123", ClientId, RedirectUri))
                  end
             },
             {"client side (implicit flow) ",
                 fun() ->
-                        oauth2_mock_db:init(),
-
                         RedirectUri = "http://REDIRECT.URL/here?this=that",
                         Scope = "This That",
                         State = "",
@@ -113,9 +107,7 @@ oauth2_test_() ->
                         %% Check invalid call
                         ?assertEqual({error, invalid_token},
                                      oauth2:verify_token(invalid, oauth2_mock_db,
-                                                         Token, ClientId)),
-
-                        oauth2_mock_db:delete_table()
+                                                         Token, ClientId))
                 end 
             }
         ]
