@@ -3,7 +3,7 @@ Oauth2 -- An erlang Oauth2 library
 
 ## DESCRIPTION
 
-Oauth2 is a library to build Oauth2 aware servers. This library tries to adhere to the spec: <http://tools.ietf.org/html/draft-ietf-oauth-v2-23>.
+Oauth2 is a library to build Oauth2 aware servers. This library tries to adhere to the spec as close as possible: <http://tools.ietf.org/html/draft-ietf-oauth-v2-23>.
 
 Currently tested and supported flows are:
 
@@ -45,10 +45,18 @@ There's a mock db adapter included which is a good reference for implementing yo
 	%%
 	%% Put Oauth2 record to the Auth DB
 	set(auth, Key, Value) ->
+	    CliendId = Value#oauth2.client_id,
+ 	    Expires = Value#oauth2.expires,
+    	Scope = Value#oauth2.scope,
+ 
     	put_to_table(?TAB_AUTH, Key, Value);
 	%%
 	%% Put Oauth2 record to the Access DB
 	set(access, Key, Value) ->
+ 	    CliendId = Value#oauth2.client_id,
+ 	    Expires = Value#oauth2.expires,
+    	Scope = Value#oauth2.scope,
+ 
     	put_to_table(?TAB_ACC, Key, Value).
 
 	%%
@@ -82,6 +90,25 @@ Here's a step by step to the various flows:
 
 ## Authentication Code Flow
 
-	Soon, real soon
+	1> RedirectUri = "http://REDIRECT.URL/here?this=that".
+	"http://REDIRECT.URL/here?this=that"
+	2> Scope = "This That".
+	"This That"
+	3> State = [].
+	[]
+	4> ClientId = "123abcABC".
+	"123abcABC"
+	5> oauth2:authorize(code, my_oauth2_db, ClientId, RedirectUri, Scope, State).
+	{ok,"n2HqNFz3QhZ_EjcXP8QuWgpCrbZCJx",
+    "http://REDIRECT.URL/here?code=n2HqNFz3QhZ_EjcXP8QuWgpCrbZCJx&this=that",
+    30}
+    6> oauth2:verify_token(authorization_code,oauth2_mock_db,"n2HqNFz3QhZ_EjcXP8QuWgpCrbZCJx", ClientId, RedirectUri).
+	{ok,[{access_token,"aTjJHonW0nsHzUp.1330937706.xS__1bdSYTYcZlB"},
+     	{token_type,"Bearer"},
+     	{expires_in,7200}]}
+     7> oauth2:verify_token(access_token,oauth2_mock_db,"aTjJHonW0nsHzUp.1330937706.xS__1bdSYTYcZlB", ClientId).    {ok,[{audience,"123abcABC"},
+     {scope,"This That"},
+     {expires_in,7046}]}
 
 xoxo
+
