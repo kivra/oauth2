@@ -86,7 +86,9 @@ Here's a step by step to the various flows:
 	4> ClientId = "123abcABC".
 	"123abcABC"
 	5> oauth2:authorize(token, my_oauth2_db, ClientId, RedirectUri, Scope, State).
-	{ok,"226a4OHh8NgasQv.1330703188.Qegej3cFVewKHr7", "http://REDIRECT.URL/here?state=Just+a+little+state&this=that#code=226a4OHh8NgasQv.1330703188.Qegej3cFVewKHr7", 7200}
+	{ok,"226a4OHh8NgasQv.1330703188.Qegej3cFVewKHr7",
+	    "http://REDIRECT.URL/here?state=Just+a+little+state&this=that#code=226a4OHh8NgasQv.1330703188.Qegej3cFVewKHr7",
+	    7200}
 
 ## Authentication Code Flow
 
