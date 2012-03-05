@@ -103,7 +103,7 @@ Here's a step by step to the various flows:
     "http://REDIRECT.URL/here?code=n2HqNFz3QhZ_EjcXP8QuWgpCrbZCJx&this=that",
     30}
     6> oauth2:verify_token(authorization_code,oauth2_mock_db,"n2HqNFz3QhZ_EjcXP8QuWgpCrbZCJx", ClientId, RedirectUri).
-	{ok,[{access_token,"aTjJHonW0nsHzUp.1330937706.xS__1bdSYTYcZlB"},
+    {ok,[{access_token,"aTjJHonW0nsHzUp.1330937706.xS__1bdSYTYcZlB"},
      	{token_type,"Bearer"},
      	{expires_in,7200}]}
      7> oauth2:verify_token(access_token,oauth2_mock_db,"aTjJHonW0nsHzUp.1330937706.xS__1bdSYTYcZlB", ClientId).    {ok,[{audience,"123abcABC"},
