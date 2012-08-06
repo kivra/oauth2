@@ -24,5 +24,24 @@
 %%
 %% ----------------------------------------------------------------------------
 
-%% Length of binary data to use for token generation.
--define(TOKEN_LENGTH, 32).
+-module(oauth2_example).
+
+%%% API
+-export([
+         start/0
+         ,stop/0
+        ]).
+
+%%%===================================================================
+%%% API
+%%%===================================================================
+
+start() ->
+    application:start(cowboy),
+    application:start(oauth2),
+    application:start(oauth2_example).
+
+stop() ->
+    application:stop(oauth2_example),
+    application:stop(oauth2),
+    application:stop(cowboy).

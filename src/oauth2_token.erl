@@ -24,5 +24,43 @@
 %%
 %% ----------------------------------------------------------------------------
 
-%% Length of binary data to use for token generation.
--define(TOKEN_LENGTH, 32).
+-module(oauth2_token).
+
+-include("oauth2.hrl").
+
+%%% API
+-export([
+         generate/0
+        ]).
+
+%%%===================================================================
+%%% API functions
+%%%===================================================================
+
+%% @doc Generates a random OAuth2 token.
+-spec generate() -> Token :: oauth2:token().
+generate() ->
+    generate_fragment(?TOKEN_LENGTH).
+
+%%%===================================================================
+%%% Internal functions
+%%%===================================================================
+
+-spec generate_fragment(N :: integer()) -> binary().
+generate_fragment(0) ->
+    <<>>;
+generate_fragment(N) ->
+    Rand = base64:encode(crypto:rand_bytes(N)),
+    Frag = << <<C>> || <<C>> <= <<Rand:N/bytes>>, is_alphanum(C) >>,
+    <<Frag/binary, (generate_fragment(N - byte_size(Frag)))/binary>>.
+
+%% @doc Returns true for alphanumeric ASCII characters, false for all others.
+-spec is_alphanum(Char :: char()) -> boolean().
+is_alphanum(C) when C >= 16#30 andalso C =< 16#39 ->
+    true;
+is_alphanum(C) when C >= 16#41 andalso C =< 16#5A ->
+    true;
+is_alphanum(C) when C >= 16#61 andalso C =< 16#7A ->
+    true;
+is_alphanum(_) ->
+    false.

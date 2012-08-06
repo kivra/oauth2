@@ -24,5 +24,15 @@
 %%
 %% ----------------------------------------------------------------------------
 
-%% Length of binary data to use for token generation.
--define(TOKEN_LENGTH, 32).
+{application, oauth2_example,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { oauth2_example_app, []}},
+  {env, []}
+ ]}.

@@ -24,5 +24,47 @@
 %%
 %% ----------------------------------------------------------------------------
 
-%% Length of binary data to use for token generation.
--define(TOKEN_LENGTH, 32).
+-module(oauth2_config).
+
+%%% API
+-export([
+         expiry_time/0,
+         backend/0
+        ]).
+
+%% Default time in seconds before an authentication token expires.
+-define(DEFAULT_TOKEN_EXPIRY, 3600).
+
+%%%===================================================================
+%%% API
+%%%===================================================================
+
+%% @doc Gets the default expiry time for access tokens.
+-spec expiry_time() -> ExpiryTime :: non_neg_integer().
+expiry_time() ->
+    get_optional(expiry_time, ?DEFAULT_TOKEN_EXPIRY).
+
+%% @doc Gets the backend for validating passwords, storing tokens, etc.
+-spec backend() -> Module :: atom().
+backend() ->
+    get_required(backend).
+
+%%%===================================================================
+%%% Internal functions
+%%%===================================================================
+
+get_optional(Key, Default) ->
+    case application:get_env(oauth2, Key) of
+        undefined ->
+            Default;
+        {ok, Value} ->
+            Value
+    end.
+
+get_required(Key) ->
+    case application:get_env(oauth2, Key) of
+        undefined ->
+            throw({missing_config, Key});
+        {ok, Value} ->
+            Value
+    end.

@@ -24,5 +24,31 @@
 %%
 %% ----------------------------------------------------------------------------
 
-%% Length of binary data to use for token generation.
--define(TOKEN_LENGTH, 32).
+-module(oauth2_example_app).
+
+-behaviour(application).
+
+%% Application callbacks
+-export([
+         start/2
+         ,stop/1
+        ]).
+
+%%%===================================================================
+%%% Application callbacks
+%%%===================================================================
+
+start(_StartType, _StartArgs) ->
+    oauth2_example_backend:start(),
+    Dispatch = [{'_', [
+                       {[<<"auth">>], oauth2_example_auth, []},
+                       {[<<"resource">>], oauth2_example_resource, []}
+               ]}],
+    cowboy:start_listener(oauth2_example_listener, 100,
+                          cowboy_tcp_transport, [{port, 8000}],
+                          cowboy_http_protocol, [{dispatch, Dispatch}]),
+    oauth2_example_sup:start_link().
+
+stop(_State) ->
+    oauth2_example_backend:stop(),
+    ok.

@@ -1,6 +1,6 @@
 REBAR = ./rebar
 
-.PHONY: all compile deps test doc clean distclean
+.PHONY: all compile deps test doc clean distclean start
 
 all: compile
 
@@ -22,3 +22,9 @@ clean:
 distclean: clean
 	@$(REBAR) delete-deps
 	-@rmdir deps
+
+start: compile
+	erl \
+	-pa ebin -pa deps/*/ebin \
+	-config priv/app.config \
+	-s oauth2_example

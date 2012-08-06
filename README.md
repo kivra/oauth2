@@ -1,117 +1,77 @@
-Oauth2 -- An erlang Oauth2 library
-====================================
+# OAuth2
+This library is designed to simplify the implementation of the server side
+of OAuth2 (http://tools.ietf.org/html/draft-ietf-oauth-v2-30). It provides
+**no** support for developing clients.
 
-## DESCRIPTION
+The library is currently in a highly experimental state and should not
+be relied upon for production use. No guarantees are made as to whether
+this library implements the OAuth2 specification correctly.
 
-Oauth2 is a library to build Oauth2 aware servers. This library tries to adhere to the spec as close as possible: <http://tools.ietf.org/html/draft-ietf-oauth-v2-23>.
+## tl;dr
+Check out the [examples](examples/)
 
-Currently tested and supported flows are:
+## Concepts
 
-* Authentication Code Flow (Web Server Flow)
-* Implicit Flow (Client Side Flow)
+### Tokens
+A token is a (randomly generated) string provided to the client by the server
+in response to some form of authorization request.
+There are several types of tokens:
 
-Other flows should work but hasn't been tested yet.
+* *Access Token*: An access token identifies the origin of a request for a
+privileged resource.
+* *Refresh Token*: A refresh token can be used to replace an expired access token.
 
-## USAGE
+#### Expiry
+Access tokens can (optionally) be set to expire after a certain amount of time.
+An expired token cannot be used to gain access to resources.
 
-Include Oauth2 as a rebar dependency with:
+### Identities
+A token is associated with an *identity* -- a value that uniquely identifies
+a user, client or agent within your system. Typically, this is a user identifier.
 
-	{deps, [{oauth2, ".*", {git, "git://github.com/bipthelin/oauth2.git", "master"}}]}.
+### Clients
+If you have many diverse clients connecting to your service -- for instance,
+a web client and an iPhone app -- it's desirable to be able to distinguish
+them from one another and to be able to grant or revoke privileges based
+on the type the client issuing a request. As described in the OAuth2 specification,
+clients come in two flavors:
 
-Then you will have to write a DB module to handle various tasks such as verifying client_id, redirect_uri, etc.
+* *Confidential* clients, which can be expected to keep their credentials
+from being disclosed. For instance, a web site owned and operated by you
+could be regarded as confidential.
+* *Public* clients, whose credentials are assumed to be compromised the
+moment the client software is released to the public.
 
-There's a mock db adapter included which is a good reference for implementing your own. It should be no more than a couple of lines of code to implement your own.
+Clients are distinguished by their identifiers, and can (optionally) be
+authenticated using a secret key shared between the client and server.
 
-	-module(my_oauth2_db).
+## Building
+This library is built using rebar wrapped with make. It has been developed
+and tested under Erlang R15B01; nothing's stopping you from trying it with another
+version, but your mileage may vary.
 
-	-export([get/2, set/3, delete/2]).
-	-export([verify_redirect_uri/2]).
+Build with:
 
-	-include_lib("include/oauth2.hrl").
+    $ make
 
-	%%
-	%% Oauth2 DB Behavior
-	-behavior(oauth2_db).
+If you want to run the EUnit test cases, you can do so with:
 
-	%%
-	%% Get Oauth2 record from the Auth DB
-	get(auth, Key) ->
-    	get_from_table(?TAB_AUTH, Key);
-	%%
-	%% Get Oauth2 record from the Access DB
-	get(access, Key) ->
-    	get_from_table(?TAB_ACC, Key).
+    $ make test
 
-	%%
-	%% Put Oauth2 record to the Auth DB
-	set(auth, Key, Value) ->
-	    CliendId = Value#oauth2.client_id,
- 	    Expires = Value#oauth2.expires,
-    	Scope = Value#oauth2.scope,
- 
-    	put_to_table(?TAB_AUTH, Key, Value);
-	%%
-	%% Put Oauth2 record to the Access DB
-	set(access, Key, Value) ->
- 	    CliendId = Value#oauth2.client_id,
- 	    Expires = Value#oauth2.expires,
-    	Scope = Value#oauth2.scope,
- 
-    	put_to_table(?TAB_ACC, Key, Value).
+To generate documentation, run:
 
-	%%
-	%% Delete Oauth2 record from the Auth DB
-	delete(auth, Key) ->
-    	delete_from_table(?TAB_AUTH, Key);
-	%%
-	%% Delete Oauth2 record from the Access DB
-	delete(access, Key) ->
-    	delete_from_table(?TAB_ACC, Key).
+    $ make doc
 
-	%%
-	%% Verify if a given Client ID and RedirectUri match
-	verify_redirect_uri(CliendId, RedirectUri) ->
-    	true.
+## Customization
+The library makes no assumptions as to how you want to implement authentication and persistence of
+users, clients and tokens. Instead, it provides a proxy module (`oauth2_backend`) for directing
+calls to a backend plugin supplied by you. To direct calls to a different backend module,
+simply set `{backend, your_backend_module}` in the `oauth2` section of your app.config.
 
-Here's a step by step to the various flows:
+A complete list of functions that your backend must provide is available by looking
+at `oauth2_backend.erl`, which contains documentation and function specifications.
 
-## Implicit Flow
-
-	1> RedirectUri = "http://REDIRECT.URL/here?this=that".
-	"http://REDIRECT.URL/here?this=that"
-	2> Scope = "This That".
-	"This That"
-	3> State = "Just a little state".
-	"Just a little state"
-	4> ClientId = "123abcABC".
-	"123abcABC"
-	5> oauth2:authorize(token, my_oauth2_db, ClientId, RedirectUri, Scope, State).
-	{ok,"226a4OHh8NgasQv.1330703188.Qegej3cFVewKHr7",
-	    "http://REDIRECT.URL/here?state=Just+a+little+state&this=that#code=226a4OHh8NgasQv.1330703188.Qegej3cFVewKHr7",
-	    7200}
-
-## Authentication Code Flow
-
-	1> RedirectUri = "http://REDIRECT.URL/here?this=that".
-	"http://REDIRECT.URL/here?this=that"
-	2> Scope = "This That".
-	"This That"
-	3> State = [].
-	[]
-	4> ClientId = "123abcABC".
-	"123abcABC"
-	5> oauth2:authorize(code, my_oauth2_db, ClientId, RedirectUri, Scope, State).
-	{ok,"n2HqNFz3QhZ_EjcXP8QuWgpCrbZCJx",
-    "http://REDIRECT.URL/here?code=n2HqNFz3QhZ_EjcXP8QuWgpCrbZCJx&this=that",
-    30}
-    6> oauth2:verify_token(authorization_code,oauth2_mock_db,"n2HqNFz3QhZ_EjcXP8QuWgpCrbZCJx", ClientId, RedirectUri).
-    {ok,[{access_token,"aTjJHonW0nsHzUp.1330937706.xS__1bdSYTYcZlB"},
-     	{token_type,"Bearer"},
-     	{expires_in,7200}]}
-     7> oauth2:verify_token(access_token,oauth2_mock_db,"aTjJHonW0nsHzUp.1330937706.xS__1bdSYTYcZlB", ClientId).
-     {ok,[{audience,"123abcABC"},
-        {scope,"This That"},
-     	{expires_in,7046}]}
-
-xoxo
+## License
+The KIVRA oauth2 library uses an [MIT license](http://en.wikipedia.org/wiki/MIT_License). So go ahead and do what
+you want!
 

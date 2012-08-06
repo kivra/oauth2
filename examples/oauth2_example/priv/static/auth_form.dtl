@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      ul {
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+      }
+    
+     ul li {
+        float: left;
+     }
+    </style>
+  </head>
+  <body>
+    <form action="/auth" method="post">
+      <input type="hidden" name="response_type" value="token" />
+      <input type="hidden" name="client_id" value="{{ client_id }}" />
+      <input type="hidden" name="redirect_uri" value="{{ redirect_uri }}" />
+      <input type="hidden" name="state" value="{{ state }}" />
+      <input type="hidden" name="scope" value="{{ scope }}" />
+      <ul>
+        <li><input placeholder="Username" type="text" name="username" /></li>
+        <li><input placeholder="Password"  type="password" name="password" /></li>
+        <li><button type="submit">Login</button></li>
+      </ul>
+    </form>
+  </body>
+</html>

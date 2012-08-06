@@ -2,170 +2,165 @@
 %%
 %% oauth2: Erlang OAuth 2.0 implementation
 %%
-%% Copyright 2012 (c) KIVRA.  All Rights Reserved.
-%% http://developer.kivra.com dev@kivra.com
+%% Copyright (c) 2012 KIVRA
 %%
-%% This file is provided to you under the Apache License, Version 2.0 (the
-%% "License"); you may not use this file except in compliance with the License.
-%% You may obtain a copy of the License at
+%% Permission is hereby granted, free of charge, to any person obtaining a
+%% copy of this software and associated documentation files (the "Software"),
+%% to deal in the Software without restriction, including without limitation
+%% the rights to use, copy, modify, merge, publish, distribute, sublicense,
+%% and/or sell copies of the Software, and to permit persons to whom the
+%% Software is furnished to do so, subject to the following conditions:
 %%
-%%   http://www.apache.org/licenses/LICENSE-2.0
+%% The above copyright notice and this permission notice shall be included in
+%% all copies or substantial portions of the Software.
 %%
-%% Unless required by applicable law or agreed to in writing, software
-%% distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-%% WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
-%% License for the specific language governing permissions and limitations
-%% under the License.
+%% THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+%% IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+%% FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+%% AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+%% LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+%% FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+%% DEALINGS IN THE SOFTWARE.
 %%
 %% ----------------------------------------------------------------------------
 
 -module(oauth2).
 
--export([authorize/6]).
--export([verify_token/4, verify_token/5]).
+%%% API
+-export([
+         authorize_password/3
+         ,authorize_client_credentials/3
+         ,verify_access_token/1
+         ,verify_redirection_uri/2
+        ]).
 
--include_lib("include/oauth2.hrl").
+%%% Internal types
+-type proplist(TyKey, TyVal) :: [{TyKey, TyVal}].
 
--define(DEF_AUTH_CODE_EXPIRE, 30).
--define(DEF_ACCESS_TOKEN_EXPIRE, 60 * 60 *2).
+%%% Exported types
+-type token()    :: binary().
+-type lifetime() :: non_neg_integer().
+-type scope()    :: binary().
+-type error()    :: invalid_request | unauthorized_client
+                  | access_denied | unsupported_response_type
+                  | invalid_scope | server_error
+                  | temporarily_unavailable.
 
-authorize(ResponseType, Db, ClientId, RedirectUri, Scope, State) ->
-    case Db:verify_redirect_uri(ClientId, RedirectUri) of
-        false ->
-            {error, redirect_uri_mismatch};
-        true ->
-            {Code, Expires} = case ResponseType of
-                token ->
-                    Data = #oauth2{client_id=ClientId,
-                                   expires=seconds_since_epoch(?DEF_ACCESS_TOKEN_EXPIRE),
-                                   scope=Scope},
-                    AccessToken = generate_access_token(Data#oauth2.expires),
-                    Key = generate_key(ClientId, AccessToken),
-                    Db:set(access, Key, Data),
-                    {AccessToken, Data#oauth2.expires};
-                code ->
-                    Data = #oauth2{client_id=ClientId,
-                                   expires=seconds_since_epoch(?DEF_AUTH_CODE_EXPIRE),
-                                   scope=Scope},
-                    AuthCode = generate_auth_code(),
-                    Key = generate_key(ClientId, AuthCode),
-                    Db:set(auth, Key, Data),
-                    {AuthCode, Data#oauth2.expires}
-            end,
-            NewRedirectUri = get_redirect_uri(ResponseType, Code, RedirectUri, State),
-            {ok, Code, NewRedirectUri, calculate_expires_in(Expires)}
+-export_type([
+              token/0
+              ,lifetime/0
+              ,scope/0
+              ,error/0
+             ]).
+
+%%%===================================================================
+%%% API functions
+%%%===================================================================
+
+%% @doc Authorizes a client via Resource Owner Password Credentials.
+-spec authorize_password(Username, Password, Scope)
+                        -> {ok, Identity} | {error, Reason} when
+      Username :: binary(),
+      Password :: binary(),
+      Scope    :: scope(),
+      Identity :: term(),
+      Reason   :: error().
+authorize_password(Username, Password, Scope) ->
+    case oauth2_backend:authenticate_username_password(Username, Password, Scope) of
+        {ok, Identity} ->
+            Response = issue_token(Identity, Scope),
+            {ok, Response};
+        {error, _Reason} ->
+            {error, access_denied}
     end.
 
-verify_token(access_token, Db, Token, ClientId) ->
-    case Db:get(access, generate_key(ClientId, Token)) of
-        {ok, Data} ->
-            ClientId = Data#oauth2.client_id,
-            Expires = Data#oauth2.expires,
-            Scope = Data#oauth2.scope,
+%% @doc Authorize client via its own credentials, i.e., a combination
+%% of a public client identifier and a shared client secret.
+%% Should only be used for confidential clients; see the OAuth2 draft
+%% for clarification.
+%% @end
+-spec authorize_client_credentials(ClientId, ClientSecret, Scope)
+                                  -> {ok, Identity} | {error, Reason} when
+      ClientId     :: binary(),
+      ClientSecret :: binary(),
+      Scope        :: scope(),
+      Identity     :: term(),
+      Reason       :: error().
+authorize_client_credentials(ClientId, ClientSecret, Scope) ->
+    case oauth2_backend:authenticate_client(ClientId, ClientSecret, Scope) of
+        {ok, Identity} ->
+            %% NOTE: The OAuth2 draft dictates that no refresh token be issued here.
+            Response = issue_token(Identity, Scope),
+            {ok, Response};
+        {error, _Reason} ->
+            {error, access_denied}
+    end.
 
-            case calculate_expires_in(Expires) > 0 of
-                false ->
-                    Db:delete(access,  generate_key(ClientId, Token)),
-                    {error, invalid_token};
+%% @doc Verifies an access token AccessToken, returning its associated
+%% context if successful. Otherwise, an OAuth2 error code is returned.
+%% @end
+-spec verify_access_token(AccessToken) -> {ok, Context} | {error, Reason} when
+      AccessToken :: token(),
+      Context     :: proplist(atom(), term()),
+      Reason      :: error().
+verify_access_token(AccessToken) ->
+    case oauth2_backend:resolve_access_token(AccessToken) of
+        {ok, Context} ->
+            ExpiryAbsolute = proplists:get_value(expiry_time, Context),
+            case ExpiryAbsolute > seconds_since_epoch(0) of
                 true ->
-                    {ok, [{audience, ClientId},
-                          {scope, Scope},
-                          {expires_in, calculate_expires_in(Expires)}
-                         ]}
+                    {ok, Context};
+                false ->
+                    oauth2_backend:revoke_access_token(AccessToken),
+                    {error, access_denied}
             end;
         _ ->
-            {error, invalid_token}
-    end;
-verify_token(_, _Db, _Token, _ClientId) ->
-    {error, invalid_token}.
-
-verify_token(authorization_code, Db, Token, ClientId, RedirectUri) ->
-    case Db:verify_redirect_uri(ClientId, RedirectUri) of
-        false ->
-            {error, redirect_uri_mismatch};
-        true ->
-            case Db:get(auth, generate_key(ClientId, Token)) of
-                {ok, Data} ->
-                    ClientId = Data#oauth2.client_id,
-                    Expires = Data#oauth2.expires,
-                    Scope = Data#oauth2.scope,
-                    Db:delete(auth,  generate_key(ClientId, Token)),
-
-                    case calculate_expires_in(Expires) > 0 of
-                        false ->
-                            {error, invalid_grant};
-                        true ->
-                            AccessToken = generate_access_token(Expires),
-                            AccessData = #oauth2{client_id=ClientId,
-                                                 expires=seconds_since_epoch(?DEF_ACCESS_TOKEN_EXPIRE),
-                                                 scope=Scope},
-                            Key = generate_key(ClientId, AccessToken),
-                            Db:set(access, Key, AccessData),
-
-                            {ok, [{access_token, AccessToken},
-                                  {token_type, "Bearer"},
-                                  {expires_in, calculate_expires_in(AccessData#oauth2.expires)}
-                                 ]}
-                    end;
-                _ ->
-                    {error, invalid_grant}
-            end
-    end;
-verify_token(_, _Db, _Token, _ClientId, _RedirectUri) ->
-    {error, invalid_token}.
-
-%% Internal API
-%%
-get_redirect_uri(Type, Code, Uri, State) ->
-    get_redirect_uri(Type, Code, Uri, State, []).
-
-get_redirect_uri(Type, Code, Uri, State, _ExtraQuery) ->
-    {S, N, P, Q, _} = mochiweb_util:urlsplit(Uri),
-    State2 = case State of
-        "" -> [];
-        StateVal -> [{state, StateVal}]
-    end,
-    Q2 = mochiweb_util:parse_qs(Q),
-    CF = [{code, Code}],
-    case Type of
-        token ->
-            Q3 = lists:append([State2, Q2]),
-            CF2 = mochiweb_util:urlencode(CF),
-            Query = mochiweb_util:urlencode(Q3),
-            mochiweb_util:urlunsplit({S, N, P, Query, CF2});
-        code ->
-            Q3 = lists:append([CF, State2, Q2]),
-            Query = mochiweb_util:urlencode(Q3),
-            mochiweb_util:urlunsplit({S, N, P, Query, ""})
+            {error, access_denied}
     end.
 
-generate_key(ClientId, AuthCode) ->
-    lists:flatten([ClientId, "#", AuthCode]).
+%% @doc Verifies that RedirectionUri matches the redirection URI registered
+%% for the client identified by ClientId.
+%% @end
+-spec verify_redirection_uri(ClientId, RedirectionUri) -> Result when
+      ClientId       :: binary(),
+      RedirectionUri :: binary(),
+      Result         :: ok | {error, Reason :: term()}.
+verify_redirection_uri(ClientId, RedirectionUri) ->
+    case oauth2_backend:get_redirection_uri(ClientId) of
+        {ok, RedirectionUri} ->
+            ok;
+        {ok, _OtherUri} ->
+            {error, mismatch};
+        Error = {error, _} ->
+            Error
+    end.
 
-generate_access_token(Expires) ->
-    S1 = generate_rnd_chars(15),
-    S2 = generate_rnd_chars(15),
-    S1++"."++integer_to_list(Expires)++"."++S2.
+%%%===================================================================
+%%% Internal functions
+%%%===================================================================
 
-generate_auth_code() ->
-    generate_rnd_chars(30).
+-spec issue_token(Identity, Scope) -> oauth2_response:response() when
+      Identity :: term(),
+      Scope    :: scope().
+issue_token(Identity, Scope) ->
+    AccessToken = oauth2_token:generate(),
+    ExpiryRelative = oauth2_config:expiry_time(),
+    ExpiryAbsolute = seconds_since_epoch(ExpiryRelative),
+    Context = build_context(Identity, ExpiryAbsolute, Scope),
+    oauth2_backend:associate_access_token(AccessToken, Context),
+    oauth2_response:new(AccessToken, ExpiryRelative, Scope).
 
-generate_rnd_chars(N) ->
-    Chars = list_to_tuple("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-"),
-    random:seed(now()),
-    rnd_auth(N, Chars).
+-spec build_context(Identity, ExpiryTime, Scope) -> Context when
+      Identity   :: term(),
+      ExpiryTime :: non_neg_integer(),
+      Scope      :: scope(),
+      Context    :: proplist(atom(),term()).
+build_context(Identity, ExpiryTime, Scope) ->
+    [{identity, Identity},
+     {expiry_time, ExpiryTime},
+     {scope, Scope}].
 
-rnd_auth(0, _) ->
-    [];
-rnd_auth(Len, C) ->
-    [rnd_auth(C)|rnd_auth(Len-1, C)].
-rnd_auth(C) ->
-    element(random:uniform(tuple_size(C)), C).
-
-calculate_expires_in(Expire) ->
-    Expire - seconds_since_epoch(0).
-
+-spec seconds_since_epoch(Diff :: integer()) -> non_neg_integer().
 seconds_since_epoch(Diff) ->
     {Mega, Secs, _Micro} = now(),
     Mega * 1000000 + Secs + Diff.
-
