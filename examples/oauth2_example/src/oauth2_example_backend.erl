@@ -106,7 +106,7 @@ authenticate_username_password(Username, Password, _Scope) ->
         {ok, #user{password = UserPw}} ->
             case Password of
                 UserPw ->
-                    {ok, {user, Username}};
+                    {ok, {<<"user">>, Username}};
                 _ ->
                     {error, badpass}
             end;
@@ -117,7 +117,7 @@ authenticate_username_password(Username, Password, _Scope) ->
 authenticate_client(ClientId, ClientSecret, _Scope) ->
     case get(?CLIENT_TABLE, ClientId) of
         {ok, #client{client_secret = ClientSecret}} ->
-            {ok, {client, ClientId}};
+            {ok, {<<"client">>, ClientId}};
         {ok, #client{client_secret = _WrongSecret}} ->
             {error, badsecret};
         _ ->
