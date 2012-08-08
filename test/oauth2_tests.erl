@@ -120,7 +120,7 @@ verify_redirection_uri_test_() ->
     {setup,
      fun start/0,
      fun stop/1,
-     fun(_) ->   
+     fun(_) ->
              [
               ?_assertEqual(ok,
                             oauth2:verify_redirection_uri(
@@ -133,7 +133,7 @@ verify_redirection_uri_test_() ->
               ?_assertMatch({error, notfound},
                             oauth2:verify_redirection_uri(
                               <<"the_wrong_client">>,
-                              ?CLIENT_URI))                              
+                              ?CLIENT_URI))
              ]
      end}.
 

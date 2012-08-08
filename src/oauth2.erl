@@ -154,11 +154,11 @@ issue_token(Identity, Scope) ->
       Identity   :: term(),
       ExpiryTime :: non_neg_integer(),
       Scope      :: scope(),
-      Context    :: proplist(atom(),term()).
+      Context    :: proplist(binary(), term()).
 build_context(Identity, ExpiryTime, Scope) ->
-    [{identity, Identity},
-     {expiry_time, ExpiryTime},
-     {scope, Scope}].
+    [{<<"identity">>, Identity},
+     {<<"expiry_time">>, list_to_binary(integer_to_list(ExpiryTime))},
+     {<<"scope">>, Scope}].
 
 -spec seconds_since_epoch(Diff :: integer()) -> non_neg_integer().
 seconds_since_epoch(Diff) ->
