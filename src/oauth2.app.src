@@ -26,8 +26,8 @@
 
 {application, oauth2,
  [
-  {description, ""},
-  {vsn, "0.1.0"},
+  {description, "OAuth2"},
+  {vsn, git},
   {registered, []},
   {applications, [
                   kernel,
