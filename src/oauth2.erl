@@ -68,7 +68,7 @@
 authorize_password(Username, Password, Scope) ->
     case oauth2_backend:authenticate_username_password(Username, Password, Scope) of
         {ok, Identity} ->
-            TTL = oauth2_config:expiry_time(),
+            TTL = oauth2_config:expiry_time(password_credentials),
             Response = issue_token(Identity, Scope, TTL),
             {ok, Response};
         {error, _Reason} ->
@@ -91,7 +91,7 @@ authorize_client_credentials(ClientId, ClientSecret, Scope) ->
     case oauth2_backend:authenticate_client(ClientId, ClientSecret, Scope) of
         {ok, Identity} ->
             %% NOTE: The OAuth2 draft dictates that no refresh token be issued here.
-            TTL = oauth2_config:expiry_time(),
+            TTL = oauth2_config:expiry_time(client_credentials),
             Response = issue_token(Identity, Scope, TTL),
             {ok, Response};
         {error, _Reason} ->
