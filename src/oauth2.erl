@@ -68,7 +68,8 @@
 authorize_password(Username, Password, Scope) ->
     case oauth2_backend:authenticate_username_password(Username, Password, Scope) of
         {ok, Identity} ->
-            Response = issue_token(Identity, Scope),
+            TTL = oauth2_config:expiry_time(),
+            Response = issue_token(Identity, Scope, TTL),
             {ok, Response};
         {error, _Reason} ->
             {error, access_denied}
@@ -90,7 +91,8 @@ authorize_client_credentials(ClientId, ClientSecret, Scope) ->
     case oauth2_backend:authenticate_client(ClientId, ClientSecret, Scope) of
         {ok, Identity} ->
             %% NOTE: The OAuth2 draft dictates that no refresh token be issued here.
-            Response = issue_token(Identity, Scope),
+            TTL = oauth2_config:expiry_time(),
+            Response = issue_token(Identity, Scope, TTL),
             {ok, Response};
         {error, _Reason} ->
             {error, access_denied}
@@ -139,16 +141,16 @@ verify_redirection_uri(ClientId, RedirectionUri) ->
 %%% Internal functions
 %%%===================================================================
 
--spec issue_token(Identity, Scope) -> oauth2_response:response() when
+-spec issue_token(Identity, Scope, TTL) -> oauth2_response:response() when
       Identity :: term(),
-      Scope    :: scope().
-issue_token(Identity, Scope) ->
+      Scope    :: scope(),
+      TTL      :: non_neg_integer().
+issue_token(Identity, Scope, TTL) ->
     AccessToken = oauth2_token:generate(),
-    ExpiryRelative = oauth2_config:expiry_time(),
-    ExpiryAbsolute = seconds_since_epoch(ExpiryRelative),
+    ExpiryAbsolute = seconds_since_epoch(TTL),
     Context = build_context(Identity, ExpiryAbsolute, Scope),
     oauth2_backend:associate_access_token(AccessToken, Context),
-    oauth2_response:new(AccessToken, ExpiryRelative, Scope).
+    oauth2_response:new(AccessToken, TTL, Scope).
 
 -spec build_context(Identity, ExpiryTime, Scope) -> Context when
       Identity   :: term(),

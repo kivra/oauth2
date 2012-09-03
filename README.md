@@ -1,6 +1,6 @@
 # OAuth2
 This library is designed to simplify the implementation of the server side
-of OAuth2 (http://tools.ietf.org/html/draft-ietf-oauth-v2-30). It provides
+of OAuth2 (http://tools.ietf.org/html/draft-ietf-oauth-v2-31). It provides
 **no** support for developing clients.
 
 The library is currently in a highly experimental state and should not

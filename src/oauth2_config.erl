@@ -28,8 +28,9 @@
 
 %%% API
 -export([
-         expiry_time/0,
-         backend/0
+         expiry_time/0
+         ,expiry_time/1
+         ,backend/0
         ]).
 
 %% Default time in seconds before an authentication token expires.
@@ -43,6 +44,19 @@
 -spec expiry_time() -> ExpiryTime :: non_neg_integer().
 expiry_time() ->
     get_optional(expiry_time, ?DEFAULT_TOKEN_EXPIRY).
+
+
+%% @doc Gets a specific expiry time for access tokens if available
+%%      returns the default if non found
+-spec expiry_time(Flow :: atom()) -> ExpiryTime :: non_neg_integer().
+expiry_time(Flow) ->
+    case application:get_env(oauth2, Flow) of
+        undefined ->
+            expiry_time();
+        {ok, Value} ->
+            proplists:get_value(expiry_time, Value, expiry_time())
+    end.
+
 
 %% @doc Gets the backend for validating passwords, storing tokens, etc.
 -spec backend() -> Module :: atom().
