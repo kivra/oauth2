@@ -50,7 +50,7 @@ generate() ->
 generate_fragment(0) ->
     <<>>;
 generate_fragment(N) ->
-    Rand = base64:encode(crypto:rand_bytes(N)),
+    Rand = base64:encode(crypto:strong_rand_bytes(N)),
     Frag = << <<C>> || <<C>> <= <<Rand:N/bytes>>, is_alphanum(C) >>,
     <<Frag/binary, (generate_fragment(N - byte_size(Frag)))/binary>>.
 
