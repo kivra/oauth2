@@ -50,7 +50,7 @@ bad_authorize_password_test_() ->
         fun stop/1,
         fun(_) -> 
                 [
-                 ?_assertMatch({ok, _},
+                 ?_assertMatch({ok, _, _},
                                oauth2:authorize_password(
                                  <<"herp">>,
                                  <<"derp">>,
@@ -104,7 +104,7 @@ verify_access_token_test_() ->
      fun(_) ->
              [
               fun() ->
-                      {ok, Response} = oauth2:authorize_client_credentials(
+                      {ok, _, Response} = oauth2:authorize_client_credentials(
                                          ?CLIENT_ID,
                                          ?CLIENT_SECRET,
                                          ?CLIENT_SCOPE),

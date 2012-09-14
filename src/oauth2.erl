@@ -59,18 +59,19 @@
 
 %% @doc Authorizes a client via Resource Owner Password Credentials.
 -spec authorize_password(Username, Password, Scope)
-                        -> {ok, Identity} | {error, Reason} when
+                        -> {ok, Identity, Response} | {error, Reason} when
       Username :: binary(),
       Password :: binary(),
       Scope    :: scope(),
       Identity :: term(),
+      Response :: oauth2_response:response(),
       Reason   :: error().
 authorize_password(Username, Password, Scope) ->
     case oauth2_backend:authenticate_username_password(Username, Password, Scope) of
         {ok, Identity} ->
             TTL = oauth2_config:expiry_time(password_credentials),
             Response = issue_token(Identity, Scope, TTL),
-            {ok, Response};
+            {ok, Identity, Response};
         {error, _Reason} ->
             {error, access_denied}
     end.
@@ -81,11 +82,13 @@ authorize_password(Username, Password, Scope) ->
 %% for clarification.
 %% @end
 -spec authorize_client_credentials(ClientId, ClientSecret, Scope)
-                                  -> {ok, Identity} | {error, Reason} when
+                                  -> {ok, Identity, Response}
+                                   | {error, Reason} when
       ClientId     :: binary(),
       ClientSecret :: binary(),
       Scope        :: scope(),
       Identity     :: term(),
+      Response     :: oauth2_response:response(),
       Reason       :: error().
 authorize_client_credentials(ClientId, ClientSecret, Scope) ->
     case oauth2_backend:authenticate_client(ClientId, ClientSecret, Scope) of
@@ -93,7 +96,7 @@ authorize_client_credentials(ClientId, ClientSecret, Scope) ->
             %% NOTE: The OAuth2 draft dictates that no refresh token be issued here.
             TTL = oauth2_config:expiry_time(client_credentials),
             Response = issue_token(Identity, Scope, TTL),
-            {ok, Response};
+            {ok, Identity, Response};
         {error, _Reason} ->
             {error, access_denied}
     end.
