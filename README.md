@@ -3,10 +3,6 @@ This library is designed to simplify the implementation of the server side
 of OAuth2 (http://tools.ietf.org/html/draft-ietf-oauth-v2-31). It provides
 **no** support for developing clients.
 
-The library is currently in a highly experimental state and should not
-be relied upon for production use. No guarantees are made as to whether
-this library implements the OAuth2 specification correctly.
-
 ## tl;dr
 Check out the [examples](https://github.com/kivra/oauth2_example)
 

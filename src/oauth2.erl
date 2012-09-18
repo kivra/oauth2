@@ -30,7 +30,11 @@
 -export([
          authorize_password/3
          ,authorize_client_credentials/3
+         ,authorize_code_grant/4
+         ,issue_code_grant/4
          ,verify_access_token/1
+         ,verify_access_code/1
+         ,verify_access_code/2
          ,verify_redirection_uri/2
         ]).
 
@@ -76,6 +80,71 @@ authorize_password(Username, Password, Scope) ->
             {error, access_denied}
     end.
 
+%% @doc Issue a Code via Access Code Grant.
+-spec issue_code_grant(ClientId, ClientSecret, RedirectionUri, Scope)
+                       -> {ok, Identity, Response} | {error, Reason} when
+      ClientId       :: binary(),
+      ClientSecret   :: binary(),
+      RedirectionUri :: scope(),
+      Scope          :: scope(),
+      Identity       :: term(),
+      Response       :: oauth2_response:response(),
+      Reason         :: error().
+issue_code_grant(ClientId, ClientSecret, RedirectionUri, Scope) ->
+    case oauth2_backend:authenticate_client(ClientId, ClientSecret, Scope) of
+        {ok, Identity} ->
+            case verify_redirection_uri(ClientId, RedirectionUri) of
+                ok ->
+                    TTL = oauth2_config:expiry_time(code_grant),
+                    Response = issue_code(Identity, Scope, TTL),
+                    {ok, Identity, Response};
+                _ ->
+                    {error, access_denied}
+            end;
+        {error, _Reason} ->
+            {error, unauthorized_client}
+    end.
+
+%% @doc Authorize client via its own credentials, i.e., a combination
+%% of a public client identifier and a shared client secret.
+%% Should only be used for confidential clients; see the OAuth2 draft
+%% for clarification.
+%%
+%% Then verify the supplied RedirectionUri and Code and if valid issue
+%% an Access Token and an optional Refresh Token
+%% @end
+-spec authorize_code_grant(ClientId, ClientSecret, AccessCode, RedirectionUri)
+                                  -> {ok, Identity, Response}
+                                   | {error, Reason} when
+      ClientId       :: binary(),
+      ClientSecret   :: binary(),
+      AccessCode     :: token(),
+      RedirectionUri :: binary(),
+      Identity       :: term(),
+      Response       :: oauth2_response:response(),
+      Reason         :: error().
+authorize_code_grant(ClientId, ClientSecret, AccessCode, RedirectionUri) ->
+    case oauth2_backend:authenticate_client(ClientId, ClientSecret, []) of
+        {ok, Identity} ->
+            case verify_redirection_uri(ClientId, RedirectionUri) of
+                ok ->
+                    case verify_access_code(AccessCode, Identity) of
+                        {ok, Context} ->
+                            TTL = oauth2_config:expiry_time(password_credentials),
+                            Scope = proplists:get_value(<<"scope">>, Context),
+                            Response = issue_token_and_refresh(Identity, Scope, TTL),
+                            oauth2_backend:revoke_access_code(AccessCode),
+                            {ok, Identity, Response};
+                        Error ->
+                            Error
+                    end;
+                _ ->
+                    {error, invalid_grant}
+            end;
+        {error, _Reason} ->
+            {error, invalid_client}
+    end.
+
 %% @doc Authorize client via its own credentials, i.e., a combination
 %% of a public client identifier and a shared client secret.
 %% Should only be used for confidential clients; see the OAuth2 draft
@@ -98,7 +167,48 @@ authorize_client_credentials(ClientId, ClientSecret, Scope) ->
             Response = issue_token(Identity, Scope, TTL),
             {ok, Identity, Response};
         {error, _Reason} ->
-            {error, access_denied}
+            {error, invalid_client}
+    end.
+
+%% @doc Verifies an access code AccessCode, returning its associated
+%% context if successful. Otherwise, an OAuth2 error code is returned.
+%% @end
+-spec verify_access_code(AccessCode) -> {ok, Context} | {error, Reason} when
+      AccessCode  :: token(),
+      Context     :: proplist(atom(), term()),
+      Reason      :: error().
+verify_access_code(AccessCode) ->
+    case oauth2_backend:resolve_access_code(AccessCode) of
+        {ok, Context} ->
+            ExpiryAbsolute = proplists:get_value(expiry_time, Context),
+            case ExpiryAbsolute > seconds_since_epoch(0) of
+                true ->
+                    {ok, Context};
+                false ->
+                    oauth2_backend:revoke_access_code(AccessCode),
+                    {error, invalid_grant}
+            end;
+        _ ->
+            {error, invalid_grant}
+    end.
+
+%% @doc Verifies an access code AccessCode and it's corresponding Identity,
+%% returning its associated context if successful. Otherwise, an OAuth2
+%% error code is returned.
+%% @end
+-spec verify_access_code(AccessCode, Identity) -> {ok, Context} | {error, Reason} when
+      AccessCode  :: token(),
+      Identity    :: term(),
+      Context     :: proplist(atom(), term()),
+      Reason      :: error().
+verify_access_code(AccessCode, Identity) ->
+    case verify_access_code(AccessCode) of
+        {ok, Context} ->
+            case proplists:get_value(<<"identity">>, Context) of
+                Identity -> {ok, Context};
+                _ -> {error, invalid_grant}
+            end;
+        Error -> Error
     end.
 
 %% @doc Verifies an access token AccessToken, returning its associated
@@ -143,6 +253,29 @@ verify_redirection_uri(ClientId, RedirectionUri) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
+-spec issue_code(Identity, Scope, TTL) -> oauth2_response:response() when
+      Identity :: term(),
+      Scope    :: scope(),
+      TTL      :: non_neg_integer().
+issue_code(Identity, Scope, TTL) ->
+    AccessCode = oauth2_token:generate(),
+    ExpiryAbsolute = seconds_since_epoch(TTL),
+    Context = build_context(Identity, ExpiryAbsolute, Scope),
+    oauth2_backend:associate_access_code(AccessCode, Context),
+    oauth2_response:new([], TTL, Scope, [], AccessCode).
+
+-spec issue_token_and_refresh(Identity, Scope, TTL) -> oauth2_response:response() when
+      Identity :: term(),
+      Scope    :: scope(),
+      TTL      :: non_neg_integer().
+issue_token_and_refresh(Identity, Scope, TTL) ->
+    AccessToken = oauth2_token:generate(),
+    RefreshToken = oauth2_token:generate(),
+    ExpiryAbsolute = seconds_since_epoch(TTL),
+    Context = build_context(Identity, ExpiryAbsolute, Scope),
+    oauth2_backend:associate_access_token(AccessToken, Context),
+    oauth2_response:new(AccessToken, TTL, Scope, RefreshToken).
 
 -spec issue_token(Identity, Scope, TTL) -> oauth2_response:response() when
       Identity :: term(),

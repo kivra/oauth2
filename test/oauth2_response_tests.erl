@@ -30,8 +30,9 @@
 
 -define(ACCESS,  <<"9bX9iFUOsXbM12OOjfDW175IXXOELp6K">>).
 -define(REFRESH, <<"JVs3ZFQJBIdduJdhhWOoAt2B3qEKcHEo">>).
--define(EXPIRY, 3600).
--define(SCOPE, <<"herp derp">>).
+-define(CODE,    <<"Lz7Z24cKSQ28z8kem01ZP9c0aE3TEbGl">>).
+-define(EXPIRY,  3600).
+-define(SCOPE,   <<"herp derp">>).
 
 %%%===================================================================
 %%% Test cases
@@ -89,12 +90,35 @@ new_4_test_() ->
              ]
      end}.
 
+
+new_5_test_() ->
+    {setup,
+     fun() -> oauth2_response:new(?ACCESS, ?EXPIRY, ?SCOPE, ?REFRESH, ?CODE) end,
+     fun(_) -> ok end,
+     fun(Response) ->
+             [
+              ?_assertEqual({error, not_set}, oauth2_response:access_token(Response)),
+              ?_assertEqual({ok, ?EXPIRY}, oauth2_response:expires_in(Response)),
+              ?_assertEqual({ok, ?SCOPE}, oauth2_response:scope(Response)),
+              ?_assertEqual({error, not_set}, oauth2_response:refresh_token(Response)),
+              ?_assertEqual({ok, ?CODE}, oauth2_response:access_code(Response))
+             ]
+     end}.
+
+
 access_token_test() ->
     ?assertEqual({ok, ?REFRESH},
                  oauth2_response:access_token(
                    oauth2_response:access_token(
                      oauth2_response:new(?ACCESS),
                      ?REFRESH))).
+
+access_code_test() ->
+    ?assertEqual({ok, ?CODE},
+                 oauth2_response:access_code(
+                   oauth2_response:access_code(
+                     oauth2_response:new([], [], [], [], ?CODE),
+                     ?CODE))).
 
 expires_in_test() ->
     ?assertEqual({ok, ?EXPIRY},

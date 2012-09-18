@@ -31,20 +31,31 @@
 
 %%% API
 -export([
-         new/1, new/2, new/3, new/4,
-         access_token/1, access_token/2,
-         refresh_token/1, refresh_token/2,
-         expires_in/1, expires_in/2,
-         scope/1, scope/2,
-         to_proplist/1
+         new/1
+         ,new/2
+         ,new/3
+         ,new/4
+         ,new/5
+         ,access_token/1
+         ,access_token/2
+         ,access_code/1
+         ,access_code/2
+         ,refresh_token/1
+         ,refresh_token/2
+         ,expires_in/1
+         ,expires_in/2
+         ,scope/1
+         ,scope/2
+         ,to_proplist/1
         ]).
 
 -record(response, {
-          access_token  :: oauth2:token(),
-          expires_in    :: oauth2:lifetime(),
-          scope         :: oauth2:scope(),
-          refresh_token :: oauth2:token(),
-          token_type = <<"bearer">> :: binary()
+          access_token   :: oauth2:token()
+          ,access_code   :: oauth2:token()
+          ,expires_in    :: oauth2:lifetime()
+          ,scope         :: oauth2:scope()
+          ,refresh_token :: oauth2:token()
+          ,token_type = <<"bearer">> :: binary()
          }).
 
 -type response() :: #response{}.
@@ -73,11 +84,24 @@ new(AccessToken, ExpiresIn, Scope, RefreshToken) ->
               scope = Scope,
               refresh_token = RefreshToken}.
 
+new(_, ExpiresIn, Scope, _, AccessCode) ->
+    #response{access_code = AccessCode,
+              expires_in = ExpiresIn,
+              scope = Scope}.
+
+access_token(#response{access_token = undefined}) ->
+    {error, not_set};
 access_token(#response{access_token = AccessToken}) ->
     {ok, AccessToken}.
 
 access_token(Response, NewAccessToken) ->
     Response#response{access_token = NewAccessToken}.
+
+access_code(#response{access_code = AccessCode}) ->
+    {ok, AccessCode}.
+
+access_code(Response, NewAccessCode) ->
+    Response#response{access_code = NewAccessCode}.
 
 expires_in(#response{expires_in = undefined}) ->
     {error, not_set};

@@ -48,7 +48,7 @@ bad_authorize_password_test_() ->
     {setup,
         fun start/0,
         fun stop/1,
-        fun(_) -> 
+        fun(_) ->
                 [
                  ?_assertMatch({ok, _, _},
                                oauth2:authorize_password(
@@ -79,17 +79,17 @@ bad_authorize_client_credentials_test_() ->
         fun stop/1,
         fun(_) ->
                 [
-                 ?_assertMatch({error, access_denied},
+                 ?_assertMatch({error, invalid_client},
                                oauth2:authorize_client_credentials(
                                  <<"XoaUdYODRCMyLkdaKkqlmhsl9QQJ4b">>,
                                  <<"fvfDMAwjlruC9rv5FsLjmyrihCcIKJL">>,
                                  <<"abc">>)),
-                 ?_assertMatch({error, access_denied},
+                 ?_assertMatch({error, invalid_client},
                                oauth2:authorize_client_credentials(
                                  <<"TiaUdYODLOMyLkdaKkqlmdhsl9QJ94a">>,
                                  <<"gggDMAwklAKc9kq5FsLjKrzihCcI123">>,
                                  <<"abc">>)),
-                 ?_assertMatch({error, access_denied},
+                 ?_assertMatch({error, invalid_client},
                                 oauth2:authorize_client_credentials(
                                  <<"TiaUdYODLOMyLkdaKkqlmdhsl9QJ94a">>,
                                  <<"fvfDMAwjlruC9rv5FsLjmyrihCcIKJL">>,
@@ -113,6 +113,33 @@ verify_access_token_test_() ->
               end,
               ?_assertMatch({error, access_denied},
                  oauth2:verify_access_token(<<"nonexistent_token">>))
+             ]
+     end}.
+
+verify_access_code_test_() ->
+    {setup,
+     fun start/0,
+     fun stop/1,
+     fun(_) ->
+             [
+              fun() ->
+                      {ok, _, Response} = oauth2:issue_code_grant(
+                                         ?CLIENT_ID,
+                                         ?CLIENT_SECRET,
+                                         ?CLIENT_URI,
+                                         ?CLIENT_SCOPE),
+                      {ok, Code} = oauth2_response:access_code(Response),
+                      ?assertMatch({ok, _}, oauth2:verify_access_code(Code)),
+                      {ok, _, Response2} = oauth2:authorize_code_grant(
+                                         ?CLIENT_ID,
+                                         ?CLIENT_SECRET,
+                                         Code,
+                                         ?CLIENT_URI),
+                      {ok, Token} = oauth2_response:access_token(Response2),
+                      ?assertMatch({ok, _}, oauth2:verify_access_token(Token))
+              end,
+              ?_assertMatch({error, invalid_grant},
+                 oauth2:verify_access_code(<<"nonexistent_token">>))
              ]
      end}.
 
@@ -155,11 +182,20 @@ start() ->
                 associate_access_token,
                 fun associate_access_token/2),
     meck:expect(oauth2_backend,
+                associate_access_code,
+                fun associate_access_code/2),
+    meck:expect(oauth2_backend,
                 resolve_access_token,
                 fun resolve_access_token/1),
     meck:expect(oauth2_backend,
                 revoke_access_token,
                 fun revoke_access_token/1),
+    meck:expect(oauth2_backend,
+                resolve_access_code,
+                fun resolve_access_code/1),
+    meck:expect(oauth2_backend,
+                revoke_access_code,
+                fun revoke_access_code/1),
     meck:expect(oauth2_backend,
                 get_redirection_uri,
                 fun get_redirection_uri/1),
@@ -182,6 +218,8 @@ authenticate_username_password(?USER_NAME, _, _) ->
 authenticate_username_password(_, _, _) ->
     {error, notfound}.
 
+authenticate_client(?CLIENT_ID, ?CLIENT_SECRET, []) ->
+    {ok, {client, 4711}};
 authenticate_client(?CLIENT_ID, ?CLIENT_SECRET, ?CLIENT_SCOPE) ->
     {ok, {client, 4711}};
 authenticate_client(?CLIENT_ID, ?CLIENT_SECRET, _) ->
@@ -191,9 +229,15 @@ authenticate_client(?CLIENT_ID, _, _) ->
 authenticate_client(_, _, _) ->
     {error, notfound}.
 
+associate_access_code(AccessCode, Context) ->
+    associate_access_token(AccessCode, Context).
+
 associate_access_token(AccessToken, Context) ->
     ets:insert(?ETS_TABLE, {AccessToken, Context}),
     ok.
+
+resolve_access_code(AccessCode) ->
+    resolve_access_token(AccessCode).
 
 resolve_access_token(AccessToken) ->
     case ets:lookup(?ETS_TABLE, AccessToken) of
@@ -202,6 +246,9 @@ resolve_access_token(AccessToken) ->
         [{_, Context}] ->
             {ok, Context}
     end.
+
+revoke_access_code(AccessCode) ->
+    revoke_access_token(AccessCode).
 
 revoke_access_token(AccessToken) ->
     ets:delete(?ETS_TABLE, AccessToken),

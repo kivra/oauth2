@@ -31,8 +31,11 @@
          authenticate_username_password/3
          ,authenticate_client/3
          ,associate_access_token/2
+         ,associate_access_code/2
          ,resolve_access_token/1
+         ,resolve_access_code/1
          ,revoke_access_token/1
+         ,revoke_access_code/1
          ,get_redirection_uri/1
         ]).
 
@@ -69,10 +72,25 @@ authenticate_username_password(Username, Password, Scope) ->
 authenticate_client(ClientId, ClientSecret, Scope) ->
     ?BACKEND:authenticate_client(ClientId, ClientSecret, Scope).
 
+%% @doc Stores a new access code AccessCode, associating it with Context.
+%% The context is a proplist carrying information about the identity
+%% with which the code is associated, when it expires, etc.
+%% @end
+-spec associate_access_code(AccessCode, Context) -> ok | {error, Reason} when
+      AccessCode  :: oauth2:token(),
+      Context     :: proplist(atom(), term()),
+      Reason      :: notfound.
+associate_access_code(AccessCode, Context) ->
+    ?BACKEND:associate_access_code(AccessCode, Context).
+
 %% @doc Stores a new access token AccessToken, associating it with Context.
 %% The context is a proplist carrying information about the identity
 %% with which the token is associated, when it expires, etc.
 %% @end
+-spec associate_access_token(AccessToken, Context) -> ok | {error, Reason} when
+      AccessToken :: oauth2:token(),
+      Context     :: proplist(atom(), term()),
+      Reason      :: notfound.
 associate_access_token(AccessToken, Context) ->
     ?BACKEND:associate_access_token(AccessToken, Context).
 
@@ -86,12 +104,29 @@ associate_access_token(AccessToken, Context) ->
 resolve_access_token(AccessToken) ->
     ?BACKEND:resolve_access_token(AccessToken).
 
+%% @doc Looks up an access code AccessCode, returning the corresponding
+%% context if a match is found.
+%% @end
+-spec resolve_access_code(AccessCode) -> {ok, Context} | {error, Reason} when
+      AccessCode  :: oauth2:token(),
+      Context     :: proplist(atom(), term()),
+      Reason      :: notfound.
+resolve_access_code(AccessCode) ->
+    ?BACKEND:resolve_access_code(AccessCode).
+
 %% @doc Revokes an access token AccessToken, so that it cannot be used again.
 -spec revoke_access_token(AccessToken) -> ok | {error, Reason} when
       AccessToken :: oauth2:token(),
       Reason      :: notfound.
 revoke_access_token(AccessToken) ->
     ?BACKEND:revoke_access_token(AccessToken).
+
+%% @doc Revokes an access code AccessCode, so that it cannot be used again.
+-spec revoke_access_code(AccessCode) -> ok | {error, Reason} when
+      AccessCode  :: oauth2:token(),
+      Reason      :: notfound.
+revoke_access_code(AccessCode) ->
+    ?BACKEND:revoke_access_code(AccessCode).
 
 %% @doc Returns the redirection URI associated with the client ClientId.
 -spec get_redirection_uri(ClientId) -> Result when
