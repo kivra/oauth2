@@ -31,6 +31,7 @@
 -define(ACCESS,  <<"9bX9iFUOsXbM12OOjfDW175IXXOELp6K">>).
 -define(REFRESH, <<"JVs3ZFQJBIdduJdhhWOoAt2B3qEKcHEo">>).
 -define(CODE,    <<"Lz7Z24cKSQ28z8kem01ZP9c0aE3TEbGl">>).
+-define(RESOURCE_OWNER, <<"user">>).
 -define(EXPIRY,  3600).
 -define(SCOPE,   <<"herp derp">>).
 
@@ -64,9 +65,9 @@ new_2_test_() ->
              ]
      end}.
 
-new_3_test_() ->
+new_4_test_() ->
     {setup,
-     fun() -> oauth2_response:new(?ACCESS, ?EXPIRY, ?SCOPE) end,
+     fun() -> oauth2_response:new(?ACCESS, ?EXPIRY, ?RESOURCE_OWNER, ?SCOPE) end,
      fun(_) -> ok end,
      fun(Response) ->
              [
@@ -77,9 +78,9 @@ new_3_test_() ->
              ]
      end}.
 
-new_4_test_() ->
+new_5_test_() ->
     {setup,
-     fun() -> oauth2_response:new(?ACCESS, ?EXPIRY, ?SCOPE, ?REFRESH) end,
+     fun() -> oauth2_response:new(?ACCESS, ?EXPIRY, ?RESOURCE_OWNER, ?SCOPE, ?REFRESH) end,
      fun(_) -> ok end,
      fun(Response) ->
              [
@@ -91,9 +92,9 @@ new_4_test_() ->
      end}.
 
 
-new_5_test_() ->
+new_6_test_() ->
     {setup,
-     fun() -> oauth2_response:new(?ACCESS, ?EXPIRY, ?SCOPE, ?REFRESH, ?CODE) end,
+     fun() -> oauth2_response:new(?ACCESS, ?EXPIRY, ?RESOURCE_OWNER, ?SCOPE, ?REFRESH, ?CODE) end,
      fun(_) -> ok end,
      fun(Response) ->
              [
@@ -141,10 +142,18 @@ refresh_token_test() ->
                      oauth2_response:new(?ACCESS),
                      ?REFRESH))).
 
+resource_owner_test() ->
+    ?assertEqual({ok, ?RESOURCE_OWNER},
+                 oauth2_response:resource_owner(
+                   oauth2_response:resource_owner(
+                     oauth2_response:new(?ACCESS),
+                     ?RESOURCE_OWNER))).
+
 to_proplist_test() ->
-    Response = oauth2_response:new(?ACCESS, ?EXPIRY, ?SCOPE, ?REFRESH),
+    Response = oauth2_response:new(?ACCESS, ?EXPIRY, ?RESOURCE_OWNER, ?SCOPE, ?REFRESH),
     ?assertEqual([{<<"access_token">>, ?ACCESS},
                   {<<"expires_in">>, list_to_binary(integer_to_list(?EXPIRY))},
+                  {<<"resource_owner">>, ?RESOURCE_OWNER},
                   {<<"scope">>, ?SCOPE},
                   {<<"refresh_token">>, ?REFRESH},
                   {<<"token_type">>, <<"bearer">>}],

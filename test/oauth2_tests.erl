@@ -131,6 +131,8 @@ verify_access_code_test_() ->
                                          ?RESOURCE_OWNER,
                                          ?CLIENT_SCOPE),
                       {ok, Code} = oauth2_response:access_code(Response),
+                      ?assertMatch({ok, ?RESOURCE_OWNER},
+                                   oauth2_response:resource_owner(Response)),
                       ?assertMatch({ok, _}, oauth2:verify_access_code(Code)),
                       {ok, _, Response2} = oauth2:authorize_code_grant(
                                          ?CLIENT_ID,

@@ -266,7 +266,7 @@ issue_code(Identity, Scope, ResOwner, TTL) ->
     ExpiryAbsolute = seconds_since_epoch(TTL),
     Context = build_context(Identity, ExpiryAbsolute, ResOwner, Scope),
     oauth2_backend:associate_access_code(AccessCode, Context),
-    oauth2_response:new([], TTL, Scope, [], AccessCode).
+    oauth2_response:new([], TTL, ResOwner, Scope, [], AccessCode).
 
 -spec issue_token_and_refresh(Identity, ResOwner, Scope, TTL) -> oauth2_response:response() when
       Identity :: term(),
@@ -279,7 +279,7 @@ issue_token_and_refresh(Identity, ResOwner, Scope, TTL) ->
     ExpiryAbsolute = seconds_since_epoch(TTL),
     Context = build_context(Identity, ExpiryAbsolute, ResOwner, Scope),
     oauth2_backend:associate_access_token(AccessToken, Context),
-    oauth2_response:new(AccessToken, TTL, Scope, RefreshToken).
+    oauth2_response:new(AccessToken, TTL, ResOwner, Scope, RefreshToken).
 
 -spec issue_token(Identity, ResOwner, Scope, TTL) -> oauth2_response:response() when
       Identity :: term(),
@@ -291,7 +291,7 @@ issue_token(Identity, ResOwner, Scope, TTL) ->
     ExpiryAbsolute = seconds_since_epoch(TTL),
     Context = build_context(Identity, ExpiryAbsolute, ResOwner, Scope),
     oauth2_backend:associate_access_token(AccessToken, Context),
-    oauth2_response:new(AccessToken, TTL, Scope).
+    oauth2_response:new(AccessToken, TTL, ResOwner, Scope).
 
 -spec build_context(Identity, ExpiryTime, ResOwner, Scope) -> Context when
       Identity   :: term(),

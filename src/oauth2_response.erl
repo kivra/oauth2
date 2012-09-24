@@ -33,15 +33,17 @@
 -export([
          new/1
          ,new/2
-         ,new/3
          ,new/4
          ,new/5
+         ,new/6
          ,access_token/1
          ,access_token/2
          ,access_code/1
          ,access_code/2
          ,refresh_token/1
          ,refresh_token/2
+         ,resource_owner/1
+         ,resource_owner/2
          ,expires_in/1
          ,expires_in/2
          ,scope/1
@@ -50,11 +52,12 @@
         ]).
 
 -record(response, {
-          access_token   :: oauth2:token()
-          ,access_code   :: oauth2:token()
-          ,expires_in    :: oauth2:lifetime()
-          ,scope         :: oauth2:scope()
-          ,refresh_token :: oauth2:token()
+          access_token    :: oauth2:token()
+          ,access_code    :: oauth2:token()
+          ,expires_in     :: oauth2:lifetime()
+          ,resource_owner :: term()
+          ,scope          :: oauth2:scope()
+          ,refresh_token  :: oauth2:token()
           ,token_type = <<"bearer">> :: binary()
          }).
 
@@ -73,20 +76,23 @@ new(AccessToken) ->
 new(AccessToken, ExpiresIn) ->
     #response{access_token = AccessToken, expires_in = ExpiresIn}.
 
-new(AccessToken, ExpiresIn, Scope) ->
+new(AccessToken, ExpiresIn, ResOwner, Scope) ->
     #response{access_token = AccessToken,
               expires_in = ExpiresIn,
+              resource_owner = ResOwner,
               scope = Scope}.
 
-new(AccessToken, ExpiresIn, Scope, RefreshToken) ->
+new(AccessToken, ExpiresIn, ResOwner, Scope, RefreshToken) ->
     #response{access_token = AccessToken,
               expires_in = ExpiresIn,
+              resource_owner = ResOwner,
               scope = Scope,
               refresh_token = RefreshToken}.
 
-new(_, ExpiresIn, Scope, _, AccessCode) ->
+new(_, ExpiresIn, ResOwner, Scope, _, AccessCode) ->
     #response{access_code = AccessCode,
               expires_in = ExpiresIn,
+              resource_owner = ResOwner,
               scope = Scope}.
 
 access_token(#response{access_token = undefined}) ->
@@ -126,6 +132,12 @@ refresh_token(#response{refresh_token = RefreshToken}) ->
 
 refresh_token(Response, NewRefreshToken) ->
     Response#response{refresh_token = NewRefreshToken}.
+
+resource_owner(#response{resource_owner = ResOwner}) ->
+    {ok, ResOwner}.
+
+resource_owner(Response, NewResOwner) ->
+    Response#response{resource_owner = NewResOwner}.
 
 to_proplist(Response) ->
     Keys = lists:map(fun to_binary/1, record_info(fields, response)),
