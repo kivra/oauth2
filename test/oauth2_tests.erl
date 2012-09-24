@@ -136,7 +136,6 @@ verify_access_code_test_() ->
                                          ?CLIENT_ID,
                                          ?CLIENT_SECRET,
                                          Code,
-                                         ?RESOURCE_OWNER,
                                          ?CLIENT_URI),
                       {ok, Token} = oauth2_response:access_token(Response2),
                       ?assertMatch({ok, _}, oauth2:verify_access_token(Token))

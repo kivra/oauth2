@@ -30,7 +30,7 @@
 -export([
          authorize_password/3
          ,authorize_client_credentials/3
-         ,authorize_code_grant/5
+         ,authorize_code_grant/4
          ,issue_code_grant/5
          ,verify_access_token/1
          ,verify_access_code/1
@@ -114,18 +114,17 @@ issue_code_grant(ClientId, ClientSecret, RedirectionUri, ResOwner, Scope) ->
 %% Then verify the supplied RedirectionUri and Code and if valid issue
 %% an Access Token and an optional Refresh Token
 %% @end
--spec authorize_code_grant(ClientId, ClientSecret, AccessCode, ResOwner, RedirectionUri)
+-spec authorize_code_grant(ClientId, ClientSecret, AccessCode, RedirectionUri)
                                   -> {ok, Identity, Response}
                                    | {error, Reason} when
       ClientId       :: binary(),
       ClientSecret   :: binary(),
       AccessCode     :: token(),
-      ResOwner       :: term(),
       RedirectionUri :: binary(),
       Identity       :: term(),
       Response       :: oauth2_response:response(),
       Reason         :: error().
-authorize_code_grant(ClientId, ClientSecret, AccessCode, ResOwner, RedirectionUri) ->
+authorize_code_grant(ClientId, ClientSecret, AccessCode, RedirectionUri) ->
     case oauth2_backend:authenticate_client(ClientId, ClientSecret, []) of
         {ok, Identity} ->
             case verify_redirection_uri(ClientId, RedirectionUri) of
@@ -134,6 +133,7 @@ authorize_code_grant(ClientId, ClientSecret, AccessCode, ResOwner, RedirectionUr
                         {ok, Context} ->
                             TTL = oauth2_config:expiry_time(password_credentials),
                             Scope = proplists:get_value(<<"scope">>, Context),
+                            ResOwner = proplists:get_value(<<"resource_owner">>, Context),
                             Response = issue_token_and_refresh(Identity, ResOwner, Scope, TTL),
                             oauth2_backend:revoke_access_code(AccessCode),
                             {ok, Identity, Response};
