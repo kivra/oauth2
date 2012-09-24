@@ -30,8 +30,8 @@
 -export([
          authorize_password/3
          ,authorize_client_credentials/3
-         ,authorize_code_grant/4
-         ,issue_code_grant/4
+         ,authorize_code_grant/5
+         ,issue_code_grant/5
          ,verify_access_token/1
          ,verify_access_code/1
          ,verify_access_code/2
@@ -74,29 +74,30 @@ authorize_password(Username, Password, Scope) ->
     case oauth2_backend:authenticate_username_password(Username, Password, Scope) of
         {ok, Identity} ->
             TTL = oauth2_config:expiry_time(password_credentials),
-            Response = issue_token(Identity, Scope, TTL),
+            Response = issue_token(Identity, Scope, <<>>, TTL),
             {ok, Identity, Response};
         {error, _Reason} ->
             {error, access_denied}
     end.
 
 %% @doc Issue a Code via Access Code Grant.
--spec issue_code_grant(ClientId, ClientSecret, RedirectionUri, Scope)
+-spec issue_code_grant(ClientId, ClientSecret, RedirectionUri, ResOwner, Scope)
                        -> {ok, Identity, Response} | {error, Reason} when
       ClientId       :: binary(),
       ClientSecret   :: binary(),
       RedirectionUri :: scope(),
+      ResOwner       :: term(),
       Scope          :: scope(),
       Identity       :: term(),
       Response       :: oauth2_response:response(),
       Reason         :: error().
-issue_code_grant(ClientId, ClientSecret, RedirectionUri, Scope) ->
+issue_code_grant(ClientId, ClientSecret, RedirectionUri, ResOwner, Scope) ->
     case oauth2_backend:authenticate_client(ClientId, ClientSecret, Scope) of
         {ok, Identity} ->
             case verify_redirection_uri(ClientId, RedirectionUri) of
                 ok ->
                     TTL = oauth2_config:expiry_time(code_grant),
-                    Response = issue_code(Identity, Scope, TTL),
+                    Response = issue_code(Identity, Scope, ResOwner, TTL),
                     {ok, Identity, Response};
                 _ ->
                     {error, access_denied}
@@ -113,17 +114,18 @@ issue_code_grant(ClientId, ClientSecret, RedirectionUri, Scope) ->
 %% Then verify the supplied RedirectionUri and Code and if valid issue
 %% an Access Token and an optional Refresh Token
 %% @end
--spec authorize_code_grant(ClientId, ClientSecret, AccessCode, RedirectionUri)
+-spec authorize_code_grant(ClientId, ClientSecret, AccessCode, ResOwner, RedirectionUri)
                                   -> {ok, Identity, Response}
                                    | {error, Reason} when
       ClientId       :: binary(),
       ClientSecret   :: binary(),
       AccessCode     :: token(),
+      ResOwner       :: term(),
       RedirectionUri :: binary(),
       Identity       :: term(),
       Response       :: oauth2_response:response(),
       Reason         :: error().
-authorize_code_grant(ClientId, ClientSecret, AccessCode, RedirectionUri) ->
+authorize_code_grant(ClientId, ClientSecret, AccessCode, ResOwner, RedirectionUri) ->
     case oauth2_backend:authenticate_client(ClientId, ClientSecret, []) of
         {ok, Identity} ->
             case verify_redirection_uri(ClientId, RedirectionUri) of
@@ -132,7 +134,7 @@ authorize_code_grant(ClientId, ClientSecret, AccessCode, RedirectionUri) ->
                         {ok, Context} ->
                             TTL = oauth2_config:expiry_time(password_credentials),
                             Scope = proplists:get_value(<<"scope">>, Context),
-                            Response = issue_token_and_refresh(Identity, Scope, TTL),
+                            Response = issue_token_and_refresh(Identity, ResOwner, Scope, TTL),
                             oauth2_backend:revoke_access_code(AccessCode),
                             {ok, Identity, Response};
                         Error ->
@@ -164,7 +166,7 @@ authorize_client_credentials(ClientId, ClientSecret, Scope) ->
         {ok, Identity} ->
             %% NOTE: The OAuth2 draft dictates that no refresh token be issued here.
             TTL = oauth2_config:expiry_time(client_credentials),
-            Response = issue_token(Identity, Scope, TTL),
+            Response = issue_token(Identity, Scope, <<>>, TTL),
             {ok, Identity, Response};
         {error, _Reason} ->
             {error, invalid_client}
@@ -254,47 +256,52 @@ verify_redirection_uri(ClientId, RedirectionUri) ->
 %%% Internal functions
 %%%===================================================================
 
--spec issue_code(Identity, Scope, TTL) -> oauth2_response:response() when
+-spec issue_code(Identity, Scope, ResOwner, TTL) -> oauth2_response:response() when
       Identity :: term(),
       Scope    :: scope(),
+      ResOwner :: term(),
       TTL      :: non_neg_integer().
-issue_code(Identity, Scope, TTL) ->
+issue_code(Identity, Scope, ResOwner, TTL) ->
     AccessCode = oauth2_token:generate(),
     ExpiryAbsolute = seconds_since_epoch(TTL),
-    Context = build_context(Identity, ExpiryAbsolute, Scope),
+    Context = build_context(Identity, ExpiryAbsolute, ResOwner, Scope),
     oauth2_backend:associate_access_code(AccessCode, Context),
     oauth2_response:new([], TTL, Scope, [], AccessCode).
 
--spec issue_token_and_refresh(Identity, Scope, TTL) -> oauth2_response:response() when
+-spec issue_token_and_refresh(Identity, ResOwner, Scope, TTL) -> oauth2_response:response() when
       Identity :: term(),
+      ResOwner :: term(),
       Scope    :: scope(),
       TTL      :: non_neg_integer().
-issue_token_and_refresh(Identity, Scope, TTL) ->
+issue_token_and_refresh(Identity, ResOwner, Scope, TTL) ->
     AccessToken = oauth2_token:generate(),
     RefreshToken = oauth2_token:generate(),
     ExpiryAbsolute = seconds_since_epoch(TTL),
-    Context = build_context(Identity, ExpiryAbsolute, Scope),
+    Context = build_context(Identity, ExpiryAbsolute, ResOwner, Scope),
     oauth2_backend:associate_access_token(AccessToken, Context),
     oauth2_response:new(AccessToken, TTL, Scope, RefreshToken).
 
--spec issue_token(Identity, Scope, TTL) -> oauth2_response:response() when
+-spec issue_token(Identity, ResOwner, Scope, TTL) -> oauth2_response:response() when
       Identity :: term(),
+      ResOwner :: term(),
       Scope    :: scope(),
       TTL      :: non_neg_integer().
-issue_token(Identity, Scope, TTL) ->
+issue_token(Identity, ResOwner, Scope, TTL) ->
     AccessToken = oauth2_token:generate(),
     ExpiryAbsolute = seconds_since_epoch(TTL),
-    Context = build_context(Identity, ExpiryAbsolute, Scope),
+    Context = build_context(Identity, ExpiryAbsolute, ResOwner, Scope),
     oauth2_backend:associate_access_token(AccessToken, Context),
     oauth2_response:new(AccessToken, TTL, Scope).
 
--spec build_context(Identity, ExpiryTime, Scope) -> Context when
+-spec build_context(Identity, ExpiryTime, ResOwner, Scope) -> Context when
       Identity   :: term(),
       ExpiryTime :: non_neg_integer(),
+      ResOwner   :: term(),
       Scope      :: scope(),
       Context    :: proplist(binary(), term()).
-build_context(Identity, ExpiryTime, Scope) ->
+build_context(Identity, ExpiryTime, ResOwner, Scope) ->
     [{<<"identity">>, Identity},
+     {<<"resource_owner">>, ResOwner},
      {<<"expiry_time">>, list_to_binary(integer_to_list(ExpiryTime))},
      {<<"scope">>, Scope}].
 

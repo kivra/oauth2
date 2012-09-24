@@ -32,6 +32,7 @@
 -define(USER_NAME,     <<"herp">>).
 -define(USER_PASSWORD, <<"derp">>).
 -define(USER_SCOPE,    <<"xyz">>).
+-define(RESOURCE_OWNER, <<"user">>).
 
 -define(CLIENT_ID,     <<"TiaUdYODLOMyLkdaKkqlmhsl9QJ94a">>).
 -define(CLIENT_SECRET, <<"fvfDMAwjlruC9rv5FsLjmyrihCcIKJL">>).
@@ -127,6 +128,7 @@ verify_access_code_test_() ->
                                          ?CLIENT_ID,
                                          ?CLIENT_SECRET,
                                          ?CLIENT_URI,
+                                         ?RESOURCE_OWNER,
                                          ?CLIENT_SCOPE),
                       {ok, Code} = oauth2_response:access_code(Response),
                       ?assertMatch({ok, _}, oauth2:verify_access_code(Code)),
@@ -134,6 +136,7 @@ verify_access_code_test_() ->
                                          ?CLIENT_ID,
                                          ?CLIENT_SECRET,
                                          Code,
+                                         ?RESOURCE_OWNER,
                                          ?CLIENT_URI),
                       {ok, Token} = oauth2_response:access_token(Response2),
                       ?assertMatch({ok, _}, oauth2:verify_access_token(Token))
