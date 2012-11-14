@@ -64,6 +64,31 @@ users, clients and tokens. Instead, it provides a proxy module (`oauth2_backend`
 calls to a backend plugin supplied by you. To direct calls to a different backend module,
 simply set `{backend, your_backend_module}` in the `oauth2` section of your app.config.
 
+The following example demonstrates a basic app.config section for oauth2.
+
+``` erlang
+[
+    {oauth2, [
+        %% Default expiry_time for access_tokens unless
+        %% overridden per flow
+        {expiry_time, 3600}
+        ,{backend, backend_goes_here}
+
+        %% Optional expiry_time override per flow
+        ,{password_credentials, [
+            {expiry_time, 7200}
+        ]}
+        ,{client_credentials, [
+            {expiry_time, 86400}
+        ]}
+        ,{code_grant, [
+            %% Recommended absolute expiry time from the spec
+            {expiry_time, 600}
+        ]}
+    ]}
+].
+```
+
 A complete list of functions that your backend must provide is available by looking
 at `oauth2_backend.erl`, which contains documentation and function specifications.
 
