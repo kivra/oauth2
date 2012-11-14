@@ -31,7 +31,7 @@
 %%% Placeholder values that the mock backend will recognize.
 -define(USER_NAME,     <<"herp">>).
 -define(USER_PASSWORD, <<"derp">>).
--define(USER_SCOPE,    <<"xyz">>).
+-define(USER_SCOPE,    [<<"xyz">>]).
 -define(RESOURCE_OWNER, <<"user">>).
 
 -define(CLIENT_ID,     <<"TiaUdYODLOMyLkdaKkqlmhsl9QJ94a">>).
@@ -55,7 +55,7 @@ bad_authorize_password_test_() ->
                                oauth2:authorize_password(
                                  <<"herp">>,
                                  <<"derp">>,
-                                 <<"xyz">>)),
+                                 [<<"xyz">>])),
                  ?_assertMatch({error, access_denied},
                                oauth2:authorize_password(
                                  <<"herp">>,

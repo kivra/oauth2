@@ -44,7 +44,7 @@
 %%% Exported types
 -type token()    :: binary().
 -type lifetime() :: non_neg_integer().
--type scope()    :: binary().
+-type scope()    :: list(binary()) | binary().
 -type error()    :: invalid_request | unauthorized_client
                   | access_denied | unsupported_response_type
                   | invalid_scope | server_error

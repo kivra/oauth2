@@ -25,6 +25,28 @@ An expired token cannot be used to gain access to resources.
 A token is associated with an *identity* -- a value that uniquely identifies
 a user, client or agent within your system. Typically, this is a user identifier.
 
+### Scope
+The scope is handled by the backend implementation. The specification outlines
+that the scope is a space delimetered set of parameters. This library
+has been developed with the following in mind.
+
+Scope is implemented as a set and loosely modeled after the Solaris RBAC priviliges, i.e.
+`solaris.x.*` and implemented as a [MAC](http://en.wikipedia.org/wiki/Mandatory_access_control)
+with the ability to narrow the scope but not extend it beyond the predefined scope.
+
+There is a utility module to work with scope. The recommendation is to pass
+a Scope as a list of binaries, i.e. `[<<"root.a.c.b">>, <<"root.x.y.z">>]`
+you can then validate these against another set like:
+
+``` erlang
+> oauth2_priv_set:is_subset(oauth2_priv_set:new([<<"root.a.b">>, <<"root.x.y">>]), oauth2_priv_set:new([<<"root.*">>])).
+true
+> oauth2_priv_set:is_subset(oauth2_priv_set:new([<<"root.a.b">>, <<"root.x.y">>]), oauth2_priv_set:new([<<"root.x.y">>])).
+false
+> oauth2_priv_set:is_subset(oauth2_priv_set:new([<<"root.a.b">>, <<"root.x.y">>]), oauth2_priv_set:new([<<"root.a.*">>, <<"root.x.y">>])).
+true
+```
+
 ### Clients
 If you have many diverse clients connecting to your service -- for instance,
 a web client and an iPhone app -- it's desirable to be able to distinguish
