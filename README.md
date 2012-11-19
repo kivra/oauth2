@@ -34,16 +34,22 @@ Scope is implemented as a set and loosely modeled after the Solaris RBAC privili
 `solaris.x.*` and implemented as a [MAC](http://en.wikipedia.org/wiki/Mandatory_access_control)
 with the ability to narrow the scope but not extend it beyond the predefined scope.
 
+But since the scope is opaque to this Oauth2 implementation you can use the
+scoping strategy that best suit your workflow.
+
 There is a utility module to work with scope. The recommendation is to pass
 a Scope as a list of binaries, i.e. `[<<"root.a.c.b">>, <<"root.x.y.z">>]`
 you can then validate these against another set like:
 
 ``` erlang
-> oauth2_priv_set:is_subset(oauth2_priv_set:new([<<"root.a.b">>, <<"root.x.y">>]), oauth2_priv_set:new([<<"root.*">>])).
+> oauth2_priv_set:is_subset(oauth2_priv_set:new([<<"root.a.b">>, <<"root.x.y">>]),
+                            oauth2_priv_set:new([<<"root.*">>])).
 true
-> oauth2_priv_set:is_subset(oauth2_priv_set:new([<<"root.a.b">>, <<"root.x.y">>]), oauth2_priv_set:new([<<"root.x.y">>])).
+> oauth2_priv_set:is_subset(oauth2_priv_set:new([<<"root.a.b">>, <<"root.x.y">>]),
+                            oauth2_priv_set:new([<<"root.x.y">>])).
 false
-> oauth2_priv_set:is_subset(oauth2_priv_set:new([<<"root.a.b">>, <<"root.x.y">>]), oauth2_priv_set:new([<<"root.a.*">>, <<"root.x.y">>])).
+> oauth2_priv_set:is_subset(oauth2_priv_set:new([<<"root.a.b">>, <<"root.x.y">>]),
+                            oauth2_priv_set:new([<<"root.a.*">>, <<"root.x.y">>])).
 true
 ```
 
