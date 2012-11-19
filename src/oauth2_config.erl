@@ -54,7 +54,10 @@ expiry_time(Flow) ->
         undefined ->
             expiry_time();
         {ok, Value} ->
-            proplists:get_value(expiry_time, Value, expiry_time())
+            case lists:keyfind(expiry_time, 1, Value) of
+                false -> expiry_time();
+                {_Key, Val} -> Val
+            end
     end.
 
 

@@ -132,9 +132,12 @@ authorize_code_grant(ClientId, ClientSecret, AccessCode, RedirectionUri) ->
                     case verify_access_code(AccessCode, Identity) of
                         {ok, Context} ->
                             TTL = oauth2_config:expiry_time(password_credentials),
-                            Scope = proplists:get_value(<<"scope">>, Context),
-                            ResOwner = proplists:get_value(<<"resource_owner">>, Context),
-                            Response = issue_token_and_refresh(Identity, ResOwner, Scope, TTL),
+                            {_, Scope} = lists:keyfind(<<"scope">>, 1, Context),
+                            {_, ResOwner} = lists:keyfind(<<"resource_owner">>,
+                                                          1, Context),
+                            Response = issue_token_and_refresh(Identity,
+                                                               ResOwner,
+                                                               Scope, TTL),
                             oauth2_backend:revoke_access_code(AccessCode),
                             {ok, Identity, Response};
                         Error ->
@@ -182,7 +185,7 @@ authorize_client_credentials(ClientId, ClientSecret, Scope) ->
 verify_access_code(AccessCode) ->
     case oauth2_backend:resolve_access_code(AccessCode) of
         {ok, Context} ->
-            ExpiryAbsolute = proplists:get_value(expiry_time, Context),
+            {_, ExpiryAbsolute} = lists:keyfind(<<"expiry_time">>, 1, Context),
             case ExpiryAbsolute > seconds_since_epoch(0) of
                 true ->
                     {ok, Context};
@@ -206,8 +209,8 @@ verify_access_code(AccessCode) ->
 verify_access_code(AccessCode, Identity) ->
     case verify_access_code(AccessCode) of
         {ok, Context} ->
-            case proplists:get_value(<<"identity">>, Context) of
-                Identity -> {ok, Context};
+            case lists:keyfind(<<"identity">>, 1, Context) of
+                {_, Identity} -> {ok, Context};
                 _ -> {error, invalid_grant}
             end;
         Error -> Error
@@ -223,7 +226,7 @@ verify_access_code(AccessCode, Identity) ->
 verify_access_token(AccessToken) ->
     case oauth2_backend:resolve_access_token(AccessToken) of
         {ok, Context} ->
-            ExpiryAbsolute = proplists:get_value(expiry_time, Context),
+            {_, ExpiryAbsolute} = lists:keyfind(<<"expiry_time">>, 1, Context),
             case ExpiryAbsolute > seconds_since_epoch(0) of
                 true ->
                     {ok, Context};
