@@ -52,22 +52,24 @@
 %% in scope are within the user's privileges to grant.
 %% @end
 -spec authenticate_username_password(Username, Password, Scope)
-                                    -> {ok, Identity} | {error, Reason} when
+                                    -> {ok, Identity, NewScope} | {error, Reason} when
       Username :: binary(),
       Password :: binary(),
       Scope    :: oauth2:scope(),
       Identity :: term(),
+      NewScope :: binary(),
       Reason   :: notfound | badpass | badscope.
 authenticate_username_password(Username, Password, Scope) ->
     ?BACKEND:authenticate_username_password(Username, Password, Scope).
 
 %% @doc Authenticates a client's credentials for a given scope.
--spec authenticate_client(ClientId, ClientSecret, Scope) -> {ok, Identity} |
+-spec authenticate_client(ClientId, ClientSecret, Scope) -> {ok, Identity, NewScope} |
                                                             {error, Reason} when
       ClientId     :: binary(),
       ClientSecret :: binary(),
       Scope        :: oauth2:scope(),
       Identity     :: term(),
+      NewScope     :: binary(),
       Reason       :: notfound | badsecret | badscope.
 authenticate_client(ClientId, ClientSecret, Scope) ->
     ?BACKEND:authenticate_client(ClientId, ClientSecret, Scope).

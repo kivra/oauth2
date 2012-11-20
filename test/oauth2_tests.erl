@@ -214,7 +214,7 @@ stop(_State) ->
 %%%===================================================================
 
 authenticate_username_password(?USER_NAME, ?USER_PASSWORD, ?USER_SCOPE) ->
-    {ok, {user, 31337}};
+    {ok, {user, 31337}, ?USER_SCOPE};
 authenticate_username_password(?USER_NAME, ?USER_PASSWORD, _) ->
     {error, badscope};
 authenticate_username_password(?USER_NAME, _, _) ->
@@ -223,9 +223,9 @@ authenticate_username_password(_, _, _) ->
     {error, notfound}.
 
 authenticate_client(?CLIENT_ID, ?CLIENT_SECRET, []) ->
-    {ok, {client, 4711}};
+    {ok, {client, 4711}, []};
 authenticate_client(?CLIENT_ID, ?CLIENT_SECRET, ?CLIENT_SCOPE) ->
-    {ok, {client, 4711}};
+    {ok, {client, 4711}, ?CLIENT_SCOPE};
 authenticate_client(?CLIENT_ID, ?CLIENT_SECRET, _) ->
     {error, badscope};
 authenticate_client(?CLIENT_ID, _, _) ->

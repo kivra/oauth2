@@ -72,9 +72,9 @@
       Reason   :: error().
 authorize_password(Username, Password, Scope) ->
     case oauth2_backend:authenticate_username_password(Username, Password, Scope) of
-        {ok, Identity} ->
+        {ok, Identity, Scope2} ->
             TTL = oauth2_config:expiry_time(password_credentials),
-            Response = issue_token(Identity, Scope, <<>>, TTL),
+            Response = issue_token(Identity, <<>>, Scope2, TTL),
             {ok, Identity, Response};
         {error, _Reason} ->
             {error, access_denied}
@@ -93,11 +93,11 @@ authorize_password(Username, Password, Scope) ->
       Reason         :: error().
 issue_code_grant(ClientId, ClientSecret, RedirectionUri, ResOwner, Scope) ->
     case oauth2_backend:authenticate_client(ClientId, ClientSecret, Scope) of
-        {ok, Identity} ->
+        {ok, Identity, Scope2} ->
             case verify_redirection_uri(ClientId, RedirectionUri) of
                 ok ->
                     TTL = oauth2_config:expiry_time(code_grant),
-                    Response = issue_code(Identity, Scope, ResOwner, TTL),
+                    Response = issue_code(Identity, Scope2, ResOwner, TTL),
                     {ok, Identity, Response};
                 _ ->
                     {error, access_denied}
@@ -126,7 +126,7 @@ issue_code_grant(ClientId, ClientSecret, RedirectionUri, ResOwner, Scope) ->
       Reason         :: error().
 authorize_code_grant(ClientId, ClientSecret, AccessCode, RedirectionUri) ->
     case oauth2_backend:authenticate_client(ClientId, ClientSecret, []) of
-        {ok, Identity} ->
+        {ok, Identity, _} ->
             case verify_redirection_uri(ClientId, RedirectionUri) of
                 ok ->
                     case verify_access_code(AccessCode, Identity) of
@@ -166,10 +166,10 @@ authorize_code_grant(ClientId, ClientSecret, AccessCode, RedirectionUri) ->
       Reason       :: error().
 authorize_client_credentials(ClientId, ClientSecret, Scope) ->
     case oauth2_backend:authenticate_client(ClientId, ClientSecret, Scope) of
-        {ok, Identity} ->
+        {ok, Identity, Scope2} ->
             %% NOTE: The OAuth2 draft dictates that no refresh token be issued here.
             TTL = oauth2_config:expiry_time(client_credentials),
-            Response = issue_token(Identity, Scope, <<>>, TTL),
+            Response = issue_token(Identity, <<>>, Scope2, TTL),
             {ok, Identity, Response};
         {error, _Reason} ->
             {error, invalid_client}
@@ -268,11 +268,8 @@ issue_code(Identity, Scope, ResOwner, TTL) ->
     AccessCode = oauth2_token:generate(),
     ExpiryAbsolute = seconds_since_epoch(TTL),
     Context = build_context(Identity, ExpiryAbsolute, ResOwner, Scope),
-    Scope2 = case oauth2_backend:associate_access_code(AccessCode, Context) of
-        ok             -> Scope;
-        {ok, NewScope} -> NewScope
-    end,
-    oauth2_response:new([], TTL, ResOwner, Scope2, [], AccessCode).
+    ok = oauth2_backend:associate_access_code(AccessCode, Context),
+    oauth2_response:new([], TTL, ResOwner, Scope, [], AccessCode).
 
 -spec issue_token_and_refresh(Identity, ResOwner, Scope, TTL) -> oauth2_response:response() when
       Identity :: term(),
@@ -284,11 +281,8 @@ issue_token_and_refresh(Identity, ResOwner, Scope, TTL) ->
     RefreshToken = oauth2_token:generate(),
     ExpiryAbsolute = seconds_since_epoch(TTL),
     Context = build_context(Identity, ExpiryAbsolute, ResOwner, Scope),
-    Scope2 = case oauth2_backend:associate_access_token(AccessToken, Context) of
-        ok             -> Scope;
-        {ok, NewScope} -> NewScope
-    end,
-    oauth2_response:new(AccessToken, TTL, ResOwner, Scope2, RefreshToken).
+    ok = oauth2_backend:associate_access_token(AccessToken, Context),
+    oauth2_response:new(AccessToken, TTL, ResOwner, Scope, RefreshToken).
 
 -spec issue_token(Identity, ResOwner, Scope, TTL) -> oauth2_response:response() when
       Identity :: term(),
@@ -299,11 +293,8 @@ issue_token(Identity, ResOwner, Scope, TTL) ->
     AccessToken = oauth2_token:generate(),
     ExpiryAbsolute = seconds_since_epoch(TTL),
     Context = build_context(Identity, ExpiryAbsolute, ResOwner, Scope),
-    Scope2 = case oauth2_backend:associate_access_token(AccessToken, Context) of
-        ok             -> Scope;
-        {ok, NewScope} -> NewScope
-    end,
-    oauth2_response:new(AccessToken, TTL, ResOwner, Scope2).
+    ok = oauth2_backend:associate_access_token(AccessToken, Context),
+    oauth2_response:new(AccessToken, TTL, ResOwner, Scope).
 
 -spec build_context(Identity, ExpiryTime, ResOwner, Scope) -> Context when
       Identity   :: term(),
