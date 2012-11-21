@@ -93,11 +93,11 @@ authorize_password(Username, Password, Scope) ->
       Reason         :: error().
 issue_code_grant(ClientId, ClientSecret, RedirectionUri, ResOwner, Scope) ->
     case oauth2_backend:authenticate_client(ClientId, ClientSecret, Scope) of
-        {ok, Identity, Scope2} ->
+        {ok, Identity, _Scope2} ->
             case verify_redirection_uri(ClientId, RedirectionUri) of
                 ok ->
                     TTL = oauth2_config:expiry_time(code_grant),
-                    Response = issue_code(Identity, Scope2, ResOwner, TTL),
+                    Response = issue_code(Identity, Scope, ResOwner, TTL),
                     {ok, Identity, Response};
                 _ ->
                     {error, access_denied}
