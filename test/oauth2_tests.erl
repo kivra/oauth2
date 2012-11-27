@@ -140,7 +140,9 @@ bad_ttl_test_() ->
                                oauth2:verify_access_token(
                                  <<"TiaUdYODLOMyLkdaKkqlmdhsl9QJ94a">>)),
                  ?_assertMatch({error, access_denied},
-                                oauth2:verify_refresh_issue_access_token(
+                                oauth2:refresh_access_token(
+                                 ?CLIENT_ID,
+                                 ?CLIENT_SECRET,
                                  <<"TiaUdYODLOMyLkdaKkqlmdhsl9QJ94a">>))
                 ]
         end}.
@@ -237,7 +239,9 @@ verify_refresh_token_test_() ->
                                          Code,
                                          ?CLIENT_URI),
                       {ok, RefreshToken} = oauth2_response:refresh_token(Response2),
-                      {ok, _, _Response3} = oauth2:verify_refresh_issue_access_token(RefreshToken),
+                      {ok, _, _Response3} = oauth2:refresh_access_token(?CLIENT_ID,
+                                                                        ?CLIENT_SECRET,
+                                                                        RefreshToken),
                       {ok, Token} = oauth2_response:access_token(Response2),
                       ?assertMatch({ok, _}, oauth2:verify_access_token(Token))
               end
