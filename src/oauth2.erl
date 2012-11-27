@@ -35,7 +35,7 @@
          ,verify_access_token/1
          ,verify_access_code/1
          ,verify_access_code/2
-         ,verify_refresh_issue_access_token/1
+         ,refresh_access_token/3
          ,verify_redirection_uri/2
         ]).
 
@@ -220,25 +220,31 @@ verify_access_code(AccessCode, Identity) ->
 %% @doc Verifies an refresh token RefreshToken, returning a new Access Token
 %% if successful. Otherwise, an OAuth2 error code is returned.
 %% @end
--spec verify_refresh_issue_access_token(RefreshToken)
+-spec refresh_access_token(ClientId, ClientSecret, RefreshToken)
                                        -> {ok, Identity, Response}
                                         | {error, Reason} when
+      ClientId     :: binary(),
+      ClientSecret :: binary(),
       RefreshToken :: token(),
       Identity     :: term(),
       Response     :: oauth2_response:response(),
       Reason       :: error().
-verify_refresh_issue_access_token(RefreshToken) ->
+refresh_access_token(ClientId, ClientSecret, RefreshToken) ->
     case oauth2_backend:resolve_refresh_token(RefreshToken) of
         {ok, Context} ->
             {_, ExpiryAbsolute} = lists:keyfind(<<"expiry_time">>, 1, Context),
             case ExpiryAbsolute > seconds_since_epoch(0) of
                 true ->
                     {_, Identity} = lists:keyfind(<<"identity">>, 1, Context),
-                    {_, ResOwner} = lists:keyfind(<<"resource_owner">>, 1, Context),
-                    {_, Scope} = lists:keyfind(<<"scope">>, 1, Context),
-                    TTL = oauth2_config:expiry_time(password_credentials),
-                    Response = issue_token(Identity, ResOwner, Scope, TTL),
-                    {ok, Identity, Response};
+                    case oauth2_backend:authenticate_client(ClientId, ClientSecret, []) of
+                        {ok, Identity, _} ->
+                            {_, ResOwner} = lists:keyfind(<<"resource_owner">>, 1, Context),
+                            {_, Scope} = lists:keyfind(<<"scope">>, 1, Context),
+                            TTL = oauth2_config:expiry_time(password_credentials),
+                            Response = issue_token(Identity, ResOwner, Scope, TTL),
+                            {ok, Identity, Response};
+                        _ -> {error, access_denied}
+                    end;
                 false ->
                     oauth2_backend:revoke_refresh_token(RefreshToken),
                     {error, access_denied}
