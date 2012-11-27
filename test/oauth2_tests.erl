@@ -98,6 +98,53 @@ bad_authorize_client_credentials_test_() ->
                 ]
         end}.
 
+bad_ttl_test_() ->
+    {setup,
+       fun () ->
+                meck:new(oauth2_backend),
+                meck:expect(oauth2_backend,
+                            resolve_access_code,
+                            fun(_) -> {ok, [{<<"identity">>, <<"123">>},
+                                           {<<"resource_owner">>, <<>>},
+                                           {<<"expiry_time">>, 123},
+                                           {<<"scope">>, <<>>}]}
+                            end),
+                meck:expect(oauth2_backend, revoke_access_code, fun(_) -> ok end),
+                meck:expect(oauth2_backend,
+                            resolve_access_token,
+                            fun(_) -> {ok, [{<<"identity">>, <<"123">>},
+                                           {<<"resource_owner">>, <<>>},
+                                           {<<"expiry_time">>, 123},
+                                           {<<"scope">>, <<>>}]}
+                            end),
+                meck:expect(oauth2_backend, revoke_access_token, fun(_) -> ok end),
+                meck:expect(oauth2_backend,
+                            resolve_refresh_token,
+                            fun(_) -> {ok, [{<<"identity">>, <<"123">>},
+                                           {<<"resource_owner">>, <<>>},
+                                           {<<"expiry_time">>, 123},
+                                           {<<"scope">>, <<>>}]}
+                            end),
+                meck:expect(oauth2_backend, revoke_refresh_token, fun(_) -> ok end),
+                ok
+        end,
+        fun (_) ->
+                 meck:unload(oauth2_backend)
+        end,
+        fun(_) ->
+                [
+                 ?_assertMatch({error, invalid_grant},
+                               oauth2:verify_access_code(
+                                 <<"XoaUdYODRCMyLkdaKkqlmhsl9QQJ4b">>)),
+                 ?_assertMatch({error, access_denied},
+                               oauth2:verify_access_token(
+                                 <<"TiaUdYODLOMyLkdaKkqlmdhsl9QJ94a">>)),
+                 ?_assertMatch({error, access_denied},
+                                oauth2:verify_refresh_issue_access_token(
+                                 <<"TiaUdYODLOMyLkdaKkqlmdhsl9QJ94a">>))
+                ]
+        end}.
+
 verify_access_token_test_() ->
     {setup,
      fun start/0,
@@ -114,6 +161,31 @@ verify_access_token_test_() ->
               end,
               ?_assertMatch({error, access_denied},
                  oauth2:verify_access_token(<<"nonexistent_token">>))
+             ]
+     end}.
+
+bad_access_code_test_() ->
+    {setup,
+     fun start/0,
+     fun stop/1,
+     fun(_) ->
+             [
+              fun() ->
+                      {error, access_denied} = oauth2:issue_code_grant(
+                                         ?CLIENT_ID,
+                                         ?CLIENT_SECRET,
+                                         <<"http://in.val.id">>,
+                                         ?RESOURCE_OWNER,
+                                         ?CLIENT_SCOPE),
+                      {error, unauthorized_client} = oauth2:issue_code_grant(
+                                         <<"XoaUdYODRCMyLkdaKkqlmhsl9QQJ4b">>,
+                                         ?CLIENT_SECRET,
+                                         ?CLIENT_URI,
+                                         ?RESOURCE_OWNER,
+                                         ?CLIENT_SCOPE),
+                      ?_assertMatch({error, invalid_grant},
+                                    oauth2:verify_access_code(<<"nonexistent_token">>))
+              end
              ]
      end}.
 
@@ -141,9 +213,34 @@ verify_access_code_test_() ->
                                          ?CLIENT_URI),
                       {ok, Token} = oauth2_response:access_token(Response2),
                       ?assertMatch({ok, _}, oauth2:verify_access_token(Token))
-              end,
-              ?_assertMatch({error, invalid_grant},
-                 oauth2:verify_access_code(<<"nonexistent_token">>))
+              end
+             ]
+     end}.
+
+verify_refresh_token_test_() ->
+    {setup,
+     fun start/0,
+     fun stop/1,
+     fun(_) ->
+             [
+              fun() ->
+                      {ok, _, Response} = oauth2:issue_code_grant(
+                                         ?CLIENT_ID,
+                                         ?CLIENT_SECRET,
+                                         ?CLIENT_URI,
+                                         ?RESOURCE_OWNER,
+                                         ?CLIENT_SCOPE),
+                      {ok, Code} = oauth2_response:access_code(Response),
+                      {ok, _, Response2} = oauth2:authorize_code_grant(
+                                         ?CLIENT_ID,
+                                         ?CLIENT_SECRET,
+                                         Code,
+                                         ?CLIENT_URI),
+                      {ok, RefreshToken} = oauth2_response:refresh_token(Response2),
+                      {ok, _, _Response3} = oauth2:verify_refresh_issue_access_token(RefreshToken),
+                      {ok, Token} = oauth2_response:access_token(Response2),
+                      ?assertMatch({ok, _}, oauth2:verify_access_token(Token))
+              end
              ]
      end}.
 
@@ -186,11 +283,17 @@ start() ->
                 associate_access_token,
                 fun associate_access_token/2),
     meck:expect(oauth2_backend,
+                associate_refresh_token,
+                fun associate_refresh_token/2),
+    meck:expect(oauth2_backend,
                 associate_access_code,
                 fun associate_access_code/2),
     meck:expect(oauth2_backend,
                 resolve_access_token,
                 fun resolve_access_token/1),
+    meck:expect(oauth2_backend,
+                resolve_refresh_token,
+                fun resolve_refresh_token/1),
     meck:expect(oauth2_backend,
                 revoke_access_token,
                 fun revoke_access_token/1),
@@ -236,12 +339,19 @@ authenticate_client(_, _, _) ->
 associate_access_code(AccessCode, Context) ->
     associate_access_token(AccessCode, Context).
 
+associate_refresh_token(RefreshToken, Context) ->
+    ets:insert(?ETS_TABLE, {RefreshToken, Context}),
+    ok.
+
 associate_access_token(AccessToken, Context) ->
     ets:insert(?ETS_TABLE, {AccessToken, Context}),
     ok.
 
 resolve_access_code(AccessCode) ->
     resolve_access_token(AccessCode).
+
+resolve_refresh_token(RefreshToken) ->
+    resolve_access_token(RefreshToken).
 
 resolve_access_token(AccessToken) ->
     case ets:lookup(?ETS_TABLE, AccessToken) of
