@@ -194,8 +194,6 @@ to_proplist(Response) ->
 %%% Internal functions
 %%%===================================================================
 
-to_binary(List) when is_list(List) ->
-    list_to_binary(List);
 to_binary(Atom) when is_atom(Atom) ->
     list_to_binary(atom_to_list(Atom));
 to_binary(Integer) when is_integer(Integer) ->
