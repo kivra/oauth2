@@ -31,11 +31,14 @@
          authenticate_username_password/3
          ,authenticate_client/3
          ,associate_access_token/2
+         ,associate_refresh_token/2
          ,associate_access_code/2
          ,resolve_access_token/1
          ,resolve_access_code/1
+         ,resolve_refresh_token/1
          ,revoke_access_token/1
          ,revoke_access_code/1
+         ,revoke_refresh_token/1
          ,get_redirection_uri/1
         ]).
 
@@ -96,6 +99,17 @@ associate_access_code(AccessCode, Context) ->
 associate_access_token(AccessToken, Context) ->
     ?BACKEND:associate_access_token(AccessToken, Context).
 
+%% @doc Stores a new refresh token RefreshToken, associating it with Context.
+%% The context is a proplist carrying information about the identity
+%% with which the token is associated, when it expires, etc.
+%% @end
+-spec associate_refresh_token(RefreshToken, Context) -> ok | {error, Reason} when
+      RefreshToken :: oauth2:token(),
+      Context      :: proplist(atom(), term()),
+      Reason       :: notfound.
+associate_refresh_token(RefreshToken, Context) ->
+    ?BACKEND:associate_refresh_token(RefreshToken, Context).
+
 %% @doc Looks up an access token AccessToken, returning the corresponding
 %% context if a match is found.
 %% @end
@@ -116,6 +130,16 @@ resolve_access_token(AccessToken) ->
 resolve_access_code(AccessCode) ->
     ?BACKEND:resolve_access_code(AccessCode).
 
+%% @doc Looks up an refresh token RefreshToken, returning the corresponding
+%% context if a match is found.
+%% @end
+-spec resolve_refresh_token(RefreshToken) -> {ok, Context} | {error, Reason} when
+      RefreshToken :: oauth2:token(),
+      Context      :: proplist(atom(), term()),
+      Reason       :: notfound.
+resolve_refresh_token(RefreshToken) ->
+    ?BACKEND:resolve_refresh_token(RefreshToken).
+
 %% @doc Revokes an access token AccessToken, so that it cannot be used again.
 -spec revoke_access_token(AccessToken) -> ok | {error, Reason} when
       AccessToken :: oauth2:token(),
@@ -129,6 +153,13 @@ revoke_access_token(AccessToken) ->
       Reason      :: notfound.
 revoke_access_code(AccessCode) ->
     ?BACKEND:revoke_access_code(AccessCode).
+
+%% @doc Revokes an refresh token RefreshToken, so that it cannot be used again.
+-spec revoke_refresh_token(RefreshToken) -> ok | {error, Reason} when
+      RefreshToken :: oauth2:token(),
+      Reason       :: notfound.
+revoke_refresh_token(RefreshToken) ->
+    ?BACKEND:revoke_refresh_token(RefreshToken).
 
 %% @doc Returns the redirection URI associated with the client ClientId.
 -spec get_redirection_uri(ClientId) -> Result when

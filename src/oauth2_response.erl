@@ -70,18 +70,33 @@
 %%% API functions
 %%%===================================================================
 
+-spec new(AccessToken :: oauth2:token()) -> response().
 new(AccessToken) ->
     #response{access_token = AccessToken}.
 
+-spec new(AccessToken, ExpiresIn) -> response() when
+    AccessToken :: oauth2:token(),
+    ExpiresIn  :: oauth2:lifetime().
 new(AccessToken, ExpiresIn) ->
     #response{access_token = AccessToken, expires_in = ExpiresIn}.
 
+-spec new(AccessToken, ExpiresIn, ResOwner, Scope) -> response() when
+    AccessToken :: oauth2:token(),
+    ExpiresIn   :: oaut2:lifetime(),
+    ResOwner    :: term(),
+    Scope       :: oauth2:scope().
 new(AccessToken, ExpiresIn, ResOwner, Scope) ->
     #response{access_token = AccessToken,
               expires_in = ExpiresIn,
               resource_owner = ResOwner,
               scope = Scope}.
 
+-spec new(AccessToken, ExpiresIn, ResOwner, Scope, RefreshToken) -> response() when
+    AccessToken  :: oauth2:token(),
+    ExpiresIn    :: oaut2:lifetime(),
+    ResOwner     :: term(),
+    Scope        :: oauth2:scope(),
+    RefreshToken :: oauth2:token().
 new(AccessToken, ExpiresIn, ResOwner, Scope, RefreshToken) ->
     #response{access_token = AccessToken,
               expires_in = ExpiresIn,
@@ -89,56 +104,87 @@ new(AccessToken, ExpiresIn, ResOwner, Scope, RefreshToken) ->
               scope = Scope,
               refresh_token = RefreshToken}.
 
-new(_, ExpiresIn, ResOwner, Scope, _, AccessCode) ->
+-spec new(_AccessToken, ExpiresIn, ResOwner, Scope, _RefreshToken, AccessCode) -> response() when
+    _AccessToken  :: oauth2:token(),
+    ExpiresIn     :: oaut2:lifetime(),
+    ResOwner      :: term(),
+    Scope         :: oauth2:scope(),
+    _RefreshToken :: oauth2:token(),
+    AccessCode    :: oauth2:token().
+new(_AccessToken, ExpiresIn, ResOwner, Scope, _RefreshToken, AccessCode) ->
     #response{access_code = AccessCode,
               expires_in = ExpiresIn,
               resource_owner = ResOwner,
               scope = Scope}.
 
+-spec access_token(response()) -> {ok, AccessToken} | {error, not_set} when
+    AccessToken :: oauth2:token().
 access_token(#response{access_token = undefined}) ->
     {error, not_set};
 access_token(#response{access_token = AccessToken}) ->
     {ok, AccessToken}.
 
+-spec access_token(response(), NewAccessToken) -> response() when
+    NewAccessToken :: oauth2:token().
 access_token(Response, NewAccessToken) ->
     Response#response{access_token = NewAccessToken}.
 
+-spec access_code(response()) -> {ok, AccessToken :: oauth2:token()}.
 access_code(#response{access_code = AccessCode}) ->
     {ok, AccessCode}.
 
+-spec access_code(response(), NewAccessCode) -> response() when
+    NewAccessCode :: oauth2:token().
 access_code(Response, NewAccessCode) ->
     Response#response{access_code = NewAccessCode}.
 
+-spec expires_in(response()) -> {ok, ExpiresIn} | {error, not_set} when
+    ExpiresIn :: oauth2:lifetime().
 expires_in(#response{expires_in = undefined}) ->
     {error, not_set};
 expires_in(#response{expires_in = ExpiresIn}) ->
     {ok, ExpiresIn}.
 
+-spec expires_in(response(), NewExpiresIn) -> response() when
+    NewExpiresIn :: oauth2:lifetime().
 expires_in(Response, NewExpiresIn) ->
     Response#response{expires_in = NewExpiresIn}.
 
+-spec scope(response()) -> {ok, Scope} | {error, not_set} when
+    Scope :: oauth2:scope().
 scope(#response{scope = undefined}) ->
     {error, not_set};
 scope(#response{scope = Scope}) ->
     {ok, Scope}.
 
+-spec scope(response(), NewScope) -> response() when
+    NewScope :: oauth2:scope().
 scope(Response, NewScope) ->
     Response#response{scope = NewScope}.
 
+-spec refresh_token(response()) -> {ok, RefreshToken} | {error, not_set} when
+    RefreshToken :: oauth2:token().
 refresh_token(#response{refresh_token = undefined}) ->
     {error, not_set};
 refresh_token(#response{refresh_token = RefreshToken}) ->
     {ok, RefreshToken}.
 
+-spec refresh_token(response(), NewRefreshToken) -> response() when
+    NewRefreshToken :: oauth2:token().
 refresh_token(Response, NewRefreshToken) ->
     Response#response{refresh_token = NewRefreshToken}.
 
+-spec resource_owner(response()) -> {ok, ResOwner} when
+    ResOwner :: term().
 resource_owner(#response{resource_owner = ResOwner}) ->
     {ok, ResOwner}.
 
+-spec resource_owner(response(), NewResOwner) -> response() when
+    NewResOwner :: term().
 resource_owner(Response, NewResOwner) ->
     Response#response{resource_owner = NewResOwner}.
 
+-spec to_proplist(response()) -> oauth2:proplist().
 to_proplist(Response) ->
     Keys = lists:map(fun to_binary/1, record_info(fields, response)),
     Values = tl(tuple_to_list(Response)), %% Head is 'response'!
