@@ -35,6 +35,7 @@
          ,verify_access_token/1
          ,verify_access_code/1
          ,verify_access_code/2
+         ,verify_refresh_issue_access_token/1
          ,verify_redirection_uri/2
         ]).
 
@@ -216,6 +217,36 @@ verify_access_code(AccessCode, Identity) ->
         Error -> Error
     end.
 
+%% @doc Verifies an refresh token RefreshToken, returning a new Access Token
+%% if successful. Otherwise, an OAuth2 error code is returned.
+%% @end
+-spec verify_refresh_issue_access_token(RefreshToken)
+                                       -> {ok, Identity, Response}
+                                        | {error, Reason} when
+      RefreshToken :: token(),
+      Identity     :: term(),
+      Response     :: oauth2_response:response(),
+      Reason       :: error().
+verify_refresh_issue_access_token(RefreshToken) ->
+    case oauth2_backend:resolve_refresh_token(RefreshToken) of
+        {ok, Context} ->
+            {_, ExpiryAbsolute} = lists:keyfind(<<"expiry_time">>, 1, Context),
+            case ExpiryAbsolute > seconds_since_epoch(0) of
+                true ->
+                    {_, Identity} = lists:keyfind(<<"identity">>, 1, Context),
+                    {_, ResOwner} = lists:keyfind(<<"resource_owner">>, 1, Context),
+                    {_, Scope} = lists:keyfind(<<"scope">>, 1, Context),
+                    TTL = oauth2_config:expiry_time(password_credentials),
+                    Response = issue_token(Identity, ResOwner, Scope, TTL),
+                    {ok, Identity, Response};
+                false ->
+                    oauth2_backend:revoke_refresh_token(RefreshToken),
+                    {error, access_denied}
+            end;
+        _ ->
+            {error, access_denied}
+    end.
+
 %% @doc Verifies an access token AccessToken, returning its associated
 %% context if successful. Otherwise, an OAuth2 error code is returned.
 %% @end
@@ -282,6 +313,7 @@ issue_token_and_refresh(Identity, ResOwner, Scope, TTL) ->
     ExpiryAbsolute = seconds_since_epoch(TTL),
     Context = build_context(Identity, ExpiryAbsolute, ResOwner, Scope),
     ok = oauth2_backend:associate_access_token(AccessToken, Context),
+    ok = oauth2_backend:associate_refresh_token(RefreshToken, Context),
     oauth2_response:new(AccessToken, TTL, ResOwner, Scope, RefreshToken).
 
 -spec issue_token(Identity, ResOwner, Scope, TTL) -> oauth2_response:response() when
