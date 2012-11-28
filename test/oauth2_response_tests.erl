@@ -26,6 +26,7 @@
 
 -module(oauth2_response_tests).
 
+-include_lib("proper/include/proper.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
 -define(ACCESS,  <<"9bX9iFUOsXbM12OOjfDW175IXXOELp6K">>).
@@ -38,6 +39,11 @@
 %%%===================================================================
 %%% Test cases
 %%%===================================================================
+
+proper_type_spec_test_() ->
+    {timeout, 1200, [{?LINE,
+                      fun() -> proper:check_specs(oauth2_response,
+                                                  [{to_file, user}]) end}]}.
 
 new_1_test_() ->
     {setup,
