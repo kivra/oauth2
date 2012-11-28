@@ -39,10 +39,8 @@
          ,verify_redirection_uri/2
         ]).
 
-%%% Internal types
--type proplist(TyKey, TyVal) :: [{TyKey, TyVal}].
-
 %%% Exported types
+-type proplist(TyKey, TyVal) :: [{TyKey, TyVal}].
 -type token()    :: binary().
 -type lifetime() :: non_neg_integer().
 -type scope()    :: list(binary()) | binary().
@@ -56,6 +54,7 @@
               ,lifetime/0
               ,scope/0
               ,error/0
+              ,proplist/2
              ]).
 
 %%%===================================================================
