@@ -52,7 +52,7 @@ new(Path) when is_binary(Path) ->
 %% @doc Returns the union of Set1 and Set2, i.e., a set such that
 %% any path present in either Set1 or Set2 is also present in the result.
 %% @end
--spec union(Set1 :: priv_set(), Set2 :: priv_set) -> Union :: priv_set().
+-spec union(Set1 :: priv_set(), Set2 :: priv_set()) -> Union :: priv_set().
 union([H1={node, Name1, _}|T1], [H2={node, Name2, _}|T2]) when Name1 < Name2 ->
     [H1|union(T1, [H2|T2])];
 union([H1={node, Name1, _}|T1], [H2={node, Name2, _}|T2]) when Name1 > Name2 ->
@@ -67,7 +67,7 @@ union([], Set) ->
     Set;
 union(Set, []) ->
     Set.
-    
+
 %% @doc Return true if Set1 is a subset of Set2, i.e., if
 %% every privilege held by Set1 is also held by Set2.
 %% @end
@@ -95,7 +95,7 @@ is_subset(_, _) ->
 %% @doc Returns true if Path is present in Set, i.e, if
 %% the privilege denoted by Path is contained within Set.
 %% @end
--spec is_member(Path :: binary() | [binary()], Set :: priv_set()) -> boolean().
+-spec is_member(Path :: binary(), Set :: priv_set()) -> boolean().
 is_member(Path, Set) ->
     is_subset(make_forest(Path), Set).
 

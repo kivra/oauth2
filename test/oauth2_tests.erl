@@ -26,6 +26,7 @@
 
 -module(oauth2_tests).
 
+-include_lib("proper/include/proper.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
 %%% Placeholder values that the mock backend will recognize.
@@ -44,6 +45,11 @@
 %%%===================================================================
 %%% Test cases
 %%%===================================================================
+
+proper_type_spec_test_() ->
+    {timeout, 1200, [{?LINE,
+                      fun() -> proper:check_specs(oauth2,
+                                                  [{to_file, user}]) end}]}.
 
 bad_authorize_password_test_() ->
     {setup,

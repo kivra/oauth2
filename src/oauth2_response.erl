@@ -82,7 +82,7 @@ new(AccessToken, ExpiresIn) ->
 
 -spec new(AccessToken, ExpiresIn, ResOwner, Scope) -> response() when
     AccessToken :: oauth2:token(),
-    ExpiresIn   :: oaut2:lifetime(),
+    ExpiresIn   :: oauth2:lifetime(),
     ResOwner    :: term(),
     Scope       :: oauth2:scope().
 new(AccessToken, ExpiresIn, ResOwner, Scope) ->
@@ -93,7 +93,7 @@ new(AccessToken, ExpiresIn, ResOwner, Scope) ->
 
 -spec new(AccessToken, ExpiresIn, ResOwner, Scope, RefreshToken) -> response() when
     AccessToken  :: oauth2:token(),
-    ExpiresIn    :: oaut2:lifetime(),
+    ExpiresIn    :: oauth2:lifetime(),
     ResOwner     :: term(),
     Scope        :: oauth2:scope(),
     RefreshToken :: oauth2:token().
@@ -106,7 +106,7 @@ new(AccessToken, ExpiresIn, ResOwner, Scope, RefreshToken) ->
 
 -spec new(_AccessToken, ExpiresIn, ResOwner, Scope, _RefreshToken, AccessCode) -> response() when
     _AccessToken  :: oauth2:token(),
-    ExpiresIn     :: oaut2:lifetime(),
+    ExpiresIn     :: oauth2:lifetime(),
     ResOwner      :: term(),
     Scope         :: oauth2:scope(),
     _RefreshToken :: oauth2:token(),
@@ -129,7 +129,10 @@ access_token(#response{access_token = AccessToken}) ->
 access_token(Response, NewAccessToken) ->
     Response#response{access_token = NewAccessToken}.
 
--spec access_code(response()) -> {ok, AccessToken :: oauth2:token()}.
+-spec access_code(response())  -> {ok, AccessCode} | {error, not_set} when
+    AccessCode :: oauth2:token().
+access_code(#response{access_code = undefined}) ->
+    {error, not_set};
 access_code(#response{access_code = AccessCode}) ->
     {ok, AccessCode}.
 
@@ -184,7 +187,7 @@ resource_owner(#response{resource_owner = ResOwner}) ->
 resource_owner(Response, NewResOwner) ->
     Response#response{resource_owner = NewResOwner}.
 
--spec to_proplist(response()) -> oauth2:proplist().
+-spec to_proplist(response()) -> oauth2:proplist(binary(), binary()).
 to_proplist(Response) ->
     Keys = lists:map(fun to_binary/1, record_info(fields, response)),
     Values = tl(tuple_to_list(Response)), %% Head is 'response'!
@@ -194,9 +197,15 @@ to_proplist(Response) ->
 %%% Internal functions
 %%%===================================================================
 
-to_binary(Atom) when is_atom(Atom) ->
-    list_to_binary(atom_to_list(Atom));
-to_binary(Integer) when is_integer(Integer) ->
-    list_to_binary(integer_to_list(Integer));
 to_binary(Binary) when is_binary(Binary) ->
-    Binary.
+    Binary;
+to_binary(List) when is_list(List) ->
+    to_binary(list_to_binary(List));
+to_binary(Atom) when is_atom(Atom) ->
+    to_binary(atom_to_list(Atom));
+to_binary(Float) when is_float(Float) ->
+    to_binary(float_to_list(Float));
+to_binary(Integer) when is_integer(Integer) ->
+    to_binary(integer_to_list(Integer));
+to_binary(Term) ->
+    to_binary(term_to_binary(Term)).
