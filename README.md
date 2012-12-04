@@ -1,7 +1,9 @@
 # OAuth2
 This library is designed to simplify the implementation of the server side
-of OAuth2 (http://tools.ietf.org/html/draft-ietf-oauth-v2-31). It provides
-**no** support for developing clients.
+of OAuth2 (http://tools.ietf.org/html/rfc6749). It provides
+**no** support for developing clients. See
+[oauth2_client](https://github.com/kivra/oauth2_client) for support in
+accessing Oauth2 enabled services.
 
 ## tl;dr
 Check out the [examples](https://github.com/kivra/oauth2_example)
