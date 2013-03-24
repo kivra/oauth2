@@ -197,6 +197,46 @@ bad_access_code_test_() ->
              ]
      end}.
 
+bad_access_code_icg3_test_() ->
+    {setup,
+     fun start/0,
+     fun stop/1,
+     fun(_) ->
+             [
+              fun() ->
+                      {error, invalid_client} = oauth2:issue_code_grant(
+                                         <<"XoaUdYODRCMyLkdaKkqlmhsl9QQJ4b">>,
+                                         ?RESOURCE_OWNER,
+                                         ?CLIENT_SCOPE),
+                      ?_assertMatch({error, invalid_grant},
+                                    oauth2:verify_access_code(<<"nonexistent_token">>))
+              end
+             ]
+     end}.
+
+bad_access_code_icg4_test_() ->
+    {setup,
+     fun start/0,
+     fun stop/1,
+     fun(_) ->
+             [
+              fun() ->
+                      {error, access_denied} = oauth2:issue_code_grant(
+                                         ?CLIENT_ID,
+                                         <<"http://in.val.id">>,
+                                         ?RESOURCE_OWNER,
+                                         ?CLIENT_SCOPE),
+                      {error, invalid_client} = oauth2:issue_code_grant(
+                                         <<"XoaUdYODRCMyLkdaKkqlmhsl9QQJ4b">>,
+                                         ?CLIENT_URI,
+                                         ?RESOURCE_OWNER,
+                                         ?CLIENT_SCOPE),
+                      ?_assertMatch({error, invalid_grant},
+                                    oauth2:verify_access_code(<<"nonexistent_token">>))
+              end
+             ]
+     end}.
+
 verify_access_code_test_() ->
     {setup,
      fun start/0,
@@ -207,6 +247,59 @@ verify_access_code_test_() ->
                       {ok, _, Response} = oauth2:issue_code_grant(
                                          ?CLIENT_ID,
                                          ?CLIENT_SECRET,
+                                         ?CLIENT_URI,
+                                         ?RESOURCE_OWNER,
+                                         ?CLIENT_SCOPE),
+                      {ok, Code} = oauth2_response:access_code(Response),
+                      ?assertMatch({ok, ?RESOURCE_OWNER},
+                                   oauth2_response:resource_owner(Response)),
+                      ?assertMatch({ok, _}, oauth2:verify_access_code(Code)),
+                      {ok, _, Response2} = oauth2:authorize_code_grant(
+                                         ?CLIENT_ID,
+                                         ?CLIENT_SECRET,
+                                         Code,
+                                         ?CLIENT_URI),
+                      {ok, Token} = oauth2_response:access_token(Response2),
+                      ?assertMatch({ok, _}, oauth2:verify_access_token(Token))
+              end
+             ]
+     end}.
+
+verify_access_code_icg3_test_() ->
+    {setup,
+     fun start/0,
+     fun stop/1,
+     fun(_) ->
+             [
+              fun() ->
+                      {ok, _, Response} = oauth2:issue_code_grant(
+                                         ?CLIENT_ID,
+                                         ?RESOURCE_OWNER,
+                                         ?CLIENT_SCOPE),
+                      {ok, Code} = oauth2_response:access_code(Response),
+                      ?assertMatch({ok, ?RESOURCE_OWNER},
+                                   oauth2_response:resource_owner(Response)),
+                      ?assertMatch({ok, _}, oauth2:verify_access_code(Code)),
+                      {ok, _, Response2} = oauth2:authorize_code_grant(
+                                         ?CLIENT_ID,
+                                         ?CLIENT_SECRET,
+                                         Code,
+                                         ?CLIENT_URI),
+                      {ok, Token} = oauth2_response:access_token(Response2),
+                      ?assertMatch({ok, _}, oauth2:verify_access_token(Token))
+              end
+             ]
+     end}.
+
+verify_access_code_icg4_test_() ->
+    {setup,
+     fun start/0,
+     fun stop/1,
+     fun(_) ->
+             [
+              fun() ->
+                      {ok, _, Response} = oauth2:issue_code_grant(
+                                         ?CLIENT_ID,
                                          ?CLIENT_URI,
                                          ?RESOURCE_OWNER,
                                          ?CLIENT_SCOPE),
@@ -290,6 +383,9 @@ start() ->
                 authenticate_client,
                 fun authenticate_client/3),
     meck:expect(oauth2_backend,
+                get_client_identity,
+                fun get_client_identity/2),
+	meck:expect(oauth2_backend,
                 associate_access_token,
                 fun associate_access_token/2),
     meck:expect(oauth2_backend,
@@ -344,6 +440,15 @@ authenticate_client(?CLIENT_ID, ?CLIENT_SECRET, _) ->
 authenticate_client(?CLIENT_ID, _, _) ->
     {error, badsecret};
 authenticate_client(_, _, _) ->
+    {error, notfound}.
+
+get_client_identity(?CLIENT_ID, []) ->
+    {ok, {client, 4711}, []};
+get_client_identity(?CLIENT_ID, ?CLIENT_SCOPE) ->
+    {ok, {client, 4711}, ?CLIENT_SCOPE};
+get_client_identity(?CLIENT_ID, _) ->
+    {error, badscope};
+get_client_identity(_, _) ->
     {error, notfound}.
 
 associate_access_code(AccessCode, Context) ->
