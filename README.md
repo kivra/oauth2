@@ -71,22 +71,12 @@ moment the client software is released to the public.
 Clients are distinguished by their identifiers, and can (optionally) be
 authenticated using a secret key shared between the client and server.
 
-## Building
-This library is built using rebar wrapped with make. It has been developed
-and tested under Erlang R15B01; nothing's stopping you from trying it with another
-version, but your mileage may vary.
-
-Build with:
-
-    $ make
-
+## Testing
 If you want to run the EUnit test cases, you can do so with:
 
-    $ make test
-
-To generate documentation, run:
-
-    $ make doc
+    $ rebar -C rebar.tests.config get-deps
+    $ rebar -C rebar.tests.config compile
+    $ rebar -C rebar.tests.config eunit skip_deps=true
 
 ## Customization
 The library makes no assumptions as to how you want to implement authentication and persistence of
