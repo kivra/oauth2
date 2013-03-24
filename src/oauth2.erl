@@ -98,7 +98,7 @@ issue_code_grant(ClientId, ResOwner, Scope) ->
             Response = issue_code(Identity, Scope, ResOwner, TTL),
             {ok, Identity, Response};
         {error, _Reason} ->
-            {error, unauthorized_client}
+            {error, invalid_client}
     end.
 
 %% @doc Issue a Code via Access Code Grant
@@ -123,7 +123,7 @@ issue_code_grant(ClientId, RedirectionUri, ResOwner, Scope) ->
                     {error, access_denied}
             end;
         {error, _Reason} ->
-            {error, unauthorized_client}
+            {error, invalid_client}
     end.
 
 %% @doc Issue a Code via Access Code Grant.

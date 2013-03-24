@@ -40,6 +40,7 @@
          ,revoke_access_code/1
          ,revoke_refresh_token/1
          ,get_redirection_uri/1
+         ,get_client_identity/2
         ]).
 
 -type proplist(Key, Val) :: [{Key, Val}].
