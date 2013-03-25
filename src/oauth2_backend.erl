@@ -40,6 +40,7 @@
          ,revoke_access_code/1
          ,revoke_refresh_token/1
          ,get_redirection_uri/1
+         ,get_client_identity/2
         ]).
 
 -type proplist(Key, Val) :: [{Key, Val}].
@@ -167,3 +168,14 @@ revoke_refresh_token(RefreshToken) ->
       Result   :: {error, Reason :: term()} | {ok, RedirectionUri :: binary()}.
 get_redirection_uri(ClientId) ->
     ?BACKEND:get_redirection_uri(ClientId).
+
+%% @doc Returns a client identity for a given id and scope.
+-spec get_client_identity(ClientId, Scope) -> {ok, Identity, NewScope} |
+                                                  {error, Reason} when
+      ClientId     :: binary(),
+      Scope        :: oauth2:scope(),
+      Identity     :: term(),
+      NewScope     :: binary(),
+      Reason       :: notfound | badsecret | badscope.
+get_client_identity(ClientId, Scope) ->
+    ?BACKEND:get_identity(ClientId, Scope).

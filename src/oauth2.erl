@@ -31,6 +31,8 @@
          authorize_password/3
          ,authorize_client_credentials/3
          ,authorize_code_grant/4
+         ,issue_code_grant/3
+         ,issue_code_grant/4
          ,issue_code_grant/5
          ,verify_access_token/1
          ,verify_access_code/1
@@ -78,6 +80,50 @@ authorize_password(Username, Password, Scope) ->
             {ok, Identity, Response};
         {error, _Reason} ->
             {error, access_denied}
+    end.
+
+%% @doc Issue a Code via Access Code Grant
+-spec issue_code_grant(ClientId, ResOwner, Scope)
+                       -> {ok, Identity, Response} | {error, Reason} when
+      ClientId       :: binary(),
+      ResOwner       :: term(),
+      Scope          :: scope(),
+      Identity       :: term(),
+      Response       :: oauth2_response:response(),
+      Reason         :: error().
+issue_code_grant(ClientId, ResOwner, Scope) ->
+    case oauth2_backend:get_client_identity(ClientId, Scope) of
+        {ok, Identity, _Scope2} ->
+            TTL = oauth2_config:expiry_time(code_grant),
+            Response = issue_code(Identity, Scope, ResOwner, TTL),
+            {ok, Identity, Response};
+        {error, _Reason} ->
+            {error, invalid_client}
+    end.
+
+%% @doc Issue a Code via Access Code Grant
+-spec issue_code_grant(ClientId, RedirectionUri, ResOwner, Scope)
+                       -> {ok, Identity, Response} | {error, Reason} when
+      ClientId       :: binary(),
+      RedirectionUri :: scope(),
+      ResOwner       :: term(),
+      Scope          :: scope(),
+      Identity       :: term(),
+      Response       :: oauth2_response:response(),
+      Reason         :: error().
+issue_code_grant(ClientId, RedirectionUri, ResOwner, Scope) ->
+    case oauth2_backend:get_client_identity(ClientId, Scope) of
+        {ok, Identity, _Scope2} ->
+            case verify_redirection_uri(ClientId, RedirectionUri) of
+                ok ->
+                    TTL = oauth2_config:expiry_time(code_grant),
+                    Response = issue_code(Identity, Scope, ResOwner, TTL),
+                    {ok, Identity, Response};
+                _ ->
+                    {error, access_denied}
+            end;
+        {error, _Reason} ->
+            {error, invalid_client}
     end.
 
 %% @doc Issue a Code via Access Code Grant.
