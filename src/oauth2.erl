@@ -347,9 +347,9 @@ verify_redirection_uri(ClientId, RedirectionUri) ->
       ResOwner :: term(),
       TTL      :: non_neg_integer().
 issue_code(Identity, Scope, ResOwner, TTL) ->
-    AccessCode = oauth2_token:generate(),
     ExpiryAbsolute = seconds_since_epoch(TTL),
     Context = build_context(Identity, ExpiryAbsolute, ResOwner, Scope),
+    AccessCode = oauth2_token_generation:generate(Context),
     ok = oauth2_backend:associate_access_code(AccessCode, Context),
     oauth2_response:new([], TTL, ResOwner, Scope, [], AccessCode).
 
@@ -359,10 +359,10 @@ issue_code(Identity, Scope, ResOwner, TTL) ->
       Scope    :: scope(),
       TTL      :: non_neg_integer().
 issue_token_and_refresh(Identity, ResOwner, Scope, TTL) ->
-    AccessToken = oauth2_token:generate(),
-    RefreshToken = oauth2_token:generate(),
     ExpiryAbsolute = seconds_since_epoch(TTL),
     Context = build_context(Identity, ExpiryAbsolute, ResOwner, Scope),
+    AccessToken = oauth2_token_generation:generate(Context),
+    RefreshToken = oauth2_token_generation:generate(Context),
     ok = oauth2_backend:associate_access_token(AccessToken, Context),
     ok = oauth2_backend:associate_refresh_token(RefreshToken, Context),
     oauth2_response:new(AccessToken, TTL, ResOwner, Scope, RefreshToken).
@@ -373,9 +373,9 @@ issue_token_and_refresh(Identity, ResOwner, Scope, TTL) ->
       Scope    :: scope(),
       TTL      :: non_neg_integer().
 issue_token(Identity, ResOwner, Scope, TTL) ->
-    AccessToken = oauth2_token:generate(),
     ExpiryAbsolute = seconds_since_epoch(TTL),
     Context = build_context(Identity, ExpiryAbsolute, ResOwner, Scope),
+    AccessToken = oauth2_token_generation:generate(Context),
     ok = oauth2_backend:associate_access_token(AccessToken, Context),
     oauth2_response:new(AccessToken, TTL, ResOwner, Scope).
 

@@ -30,7 +30,7 @@
 
 %%% API
 -export([
-         generate/0
+         generate/1
         ]).
 
 %%% Exported for testability
@@ -38,13 +38,15 @@
          strong_rand_bytes_proxy/1
         ]).
 
+-type proplist(Key, Val) :: [{Key, Val}].
+
 %%%===================================================================
 %%% API functions
 %%%===================================================================
 
 %% @doc Generates a random OAuth2 token.
--spec generate() -> Token :: oauth2:token().
-generate() ->
+-spec generate(Context :: proplist(atom(), term())) -> Token :: oauth2:token().
+generate(_Context) ->
     generate_fragment(?TOKEN_LENGTH).
 
 %%%===================================================================

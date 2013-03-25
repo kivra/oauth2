@@ -31,6 +31,7 @@
          expiry_time/0
          ,expiry_time/1
          ,backend/0
+         ,token_generation/0
         ]).
 
 %% Default time in seconds before an authentication token expires.
@@ -65,6 +66,12 @@ expiry_time(Flow) ->
 -spec backend() -> Module :: atom().
 backend() ->
     get_required(backend).
+
+
+%% @doc Gets the backend for generating tokens.
+-spec token_generation() -> Module :: atom().
+token_generation() ->
+    get_optional(token_generation, oauth2_token).
 
 %%%===================================================================
 %%% Internal functions

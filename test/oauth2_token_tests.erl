@@ -40,7 +40,7 @@ proper_type_spec_test_() ->
                                                   [{to_file, user}]) end}]}.
 
 generate_test() ->
-    Token = oauth2_token:generate(),
+    Token = oauth2_token:generate([]),
     ?assertEqual(byte_size(Token), ?TOKEN_LENGTH),
     ?assert(lists:all(fun is_alphanum/1, binary_to_list(Token))).
 
@@ -57,12 +57,11 @@ generate_low_entropy_test_() ->
      fun(_) ->
              [
               ?_assertEqual(
-                 byte_size(oauth2_token:generate()),
+                byte_size(oauth2_token:generate([])),
                  ?TOKEN_LENGTH),
               ?_assert(
                  lists:all(fun is_alphanum/1,
-                           binary_to_list(
-                             oauth2_token:generate())))
+                           binary_to_list(oauth2_token:generate([]))))
              ]
      end}.
 
