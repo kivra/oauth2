@@ -62,7 +62,7 @@ bad_authorize_password_test_() ->
                                  <<"herp">>,
                                  <<"derp">>,
                                  [<<"xyz">>])),
-                 ?_assertMatch({error, access_denied},
+                 ?_assertMatch({error, invalid_scope},
                                oauth2:authorize_password(
                                  <<"herp">>,
                                  <<"derp">>,
@@ -91,6 +91,11 @@ bad_authorize_client_credentials_test_() ->
                                  <<"XoaUdYODRCMyLkdaKkqlmhsl9QQJ4b">>,
                                  <<"fvfDMAwjlruC9rv5FsLjmyrihCcIKJL">>,
                                  <<"abc">>)),
+                 ?_assertMatch({error, invalid_scope},
+                               oauth2:authorize_client_credentials(
+                                 ?CLIENT_ID,
+                                 ?CLIENT_SECRET,
+                                 <<"bad_scope">>)),
                  ?_assertMatch({error, invalid_client},
                                oauth2:authorize_client_credentials(
                                  <<"TiaUdYODLOMyLkdaKkqlmdhsl9QJ94a">>,
@@ -347,27 +352,6 @@ verify_refresh_token_test_() ->
              ]
      end}.
 
-verify_redirection_uri_test_() ->
-    {setup,
-     fun start/0,
-     fun stop/1,
-     fun(_) ->
-             [
-              ?_assertEqual(ok,
-                            oauth2:verify_redirection_uri(
-                              ?CLIENT_ID,
-                              ?CLIENT_URI)),
-              ?_assertMatch({error, mismatch},
-                            oauth2:verify_redirection_uri(
-                              ?CLIENT_ID,
-                              <<"https://the.wrong.url.ru">>)),
-              ?_assertMatch({error, notfound},
-                            oauth2:verify_redirection_uri(
-                              <<"the_wrong_client">>,
-                              ?CLIENT_URI))
-             ]
-     end}.
-
 %%%===================================================================
 %%% Setup/teardown
 %%%===================================================================
@@ -378,14 +362,14 @@ start() ->
     meck:new(oauth2_backend),
     meck:expect(oauth2_backend,
                 authenticate_username_password,
-                fun authenticate_username_password/3),
+                fun authenticate_username_password/2),
     meck:expect(oauth2_backend,
                 authenticate_client,
-                fun authenticate_client/3),
+                fun authenticate_client/2),
     meck:expect(oauth2_backend,
                 get_client_identity,
-                fun get_client_identity/2),
-	meck:expect(oauth2_backend,
+                fun get_client_identity/1),
+    meck:expect(oauth2_backend,
                 associate_access_token,
                 fun associate_access_token/2),
     meck:expect(oauth2_backend,
@@ -412,6 +396,15 @@ start() ->
     meck:expect(oauth2_backend,
                 get_redirection_uri,
                 fun get_redirection_uri/1),
+    meck:expect(oauth2_backend,
+                verify_redirection_uri,
+                fun verify_redirection_uri/2),
+    meck:expect(oauth2_backend,
+                verify_client_scope,
+                fun verify_client_scope/2),
+    meck:expect(oauth2_backend,
+                verify_user_scope,
+                fun verify_user_scope/2),
     ok.
 
 stop(_State) ->
@@ -422,33 +415,23 @@ stop(_State) ->
 %%% Mockup backend functions
 %%%===================================================================
 
-authenticate_username_password(?USER_NAME, ?USER_PASSWORD, ?USER_SCOPE) ->
-    {ok, {user, 31337}, ?USER_SCOPE};
-authenticate_username_password(?USER_NAME, ?USER_PASSWORD, _) ->
-    {error, badscope};
-authenticate_username_password(?USER_NAME, _, _) ->
+authenticate_username_password(?USER_NAME, ?USER_PASSWORD) ->
+    {ok, {user, 31337}};
+authenticate_username_password(?USER_NAME, _) ->
     {error, badpass};
-authenticate_username_password(_, _, _) ->
+authenticate_username_password(_, _) ->
     {error, notfound}.
 
-authenticate_client(?CLIENT_ID, ?CLIENT_SECRET, []) ->
-    {ok, {client, 4711}, []};
-authenticate_client(?CLIENT_ID, ?CLIENT_SECRET, ?CLIENT_SCOPE) ->
-    {ok, {client, 4711}, ?CLIENT_SCOPE};
-authenticate_client(?CLIENT_ID, ?CLIENT_SECRET, _) ->
-    {error, badscope};
-authenticate_client(?CLIENT_ID, _, _) ->
+authenticate_client(?CLIENT_ID, ?CLIENT_SECRET) ->
+    {ok, {client, 4711}};
+authenticate_client(?CLIENT_ID, _) ->
     {error, badsecret};
-authenticate_client(_, _, _) ->
+authenticate_client(_, _) ->
     {error, notfound}.
 
-get_client_identity(?CLIENT_ID, []) ->
-    {ok, {client, 4711}, []};
-get_client_identity(?CLIENT_ID, ?CLIENT_SCOPE) ->
-    {ok, {client, 4711}, ?CLIENT_SCOPE};
-get_client_identity(?CLIENT_ID, _) ->
-    {error, badscope};
-get_client_identity(_, _) ->
+get_client_identity(?CLIENT_ID) ->
+    {ok, {client, 4711}};
+get_client_identity(_) ->
     {error, notfound}.
 
 associate_access_code(AccessCode, Context) ->
@@ -487,3 +470,20 @@ get_redirection_uri(?CLIENT_ID) ->
     {ok, ?CLIENT_URI};
 get_redirection_uri(_) ->
     {error, notfound}.
+
+verify_redirection_uri({client, 4711}, ?CLIENT_URI) ->
+    ok;
+verify_redirection_uri(_, _) ->
+    {error, mismatch}.
+
+verify_client_scope({client, 4711}, []) ->
+    {ok, []};
+verify_client_scope({client, 4711}, ?CLIENT_SCOPE) ->
+    {ok, ?CLIENT_SCOPE};
+verify_client_scope(_, _) ->
+    {error, invalid_scope}.
+
+verify_user_scope({user, 31337}, ?USER_SCOPE) ->
+    {ok, ?USER_SCOPE};
+verify_user_scope(_, _) ->
+    {error, invalid_scope}.
