@@ -28,8 +28,8 @@
 
 %%% API
 -export([
-         authenticate_username_password/3
-         ,authenticate_client/3
+         authenticate_username_password/2
+         ,authenticate_client/2
          ,associate_access_token/2
          ,associate_refresh_token/2
          ,associate_access_code/2
@@ -40,8 +40,10 @@
          ,revoke_access_code/1
          ,revoke_refresh_token/1
          ,get_redirection_uri/1
-         ,get_client_identity/2
+         ,get_client_identity/1
          ,verify_redirection_uri/2
+         ,verify_client_scope/2
+         ,verify_user_scope/2
         ]).
 
 -type proplist(Key, Val) :: [{Key, Val}].
@@ -52,32 +54,27 @@
 %%% API functions
 %%%===================================================================
 
-%% @doc Authenticates a combination of username, password and scope.
-%% Returns true if the user's credentials are valid and all items
-%% in scope are within the user's privileges to grant.
+%% @doc Authenticates a combination of username and password.
+%% Returns the resource owner identity if the credentials are valid.
 %% @end
--spec authenticate_username_password(Username, Password, Scope)
-                                    -> {ok, Identity, NewScope} | {error, Reason} when
+-spec authenticate_username_password(Username, Password)
+                                    -> {ok, Identity} | {error, Reason} when
       Username :: binary(),
       Password :: binary(),
-      Scope    :: oauth2:scope(),
       Identity :: term(),
-      NewScope :: binary(),
-      Reason   :: notfound | badpass | badscope.
-authenticate_username_password(Username, Password, Scope) ->
-    ?BACKEND:authenticate_username_password(Username, Password, Scope).
+      Reason   :: notfound | badpass.
+authenticate_username_password(Username, Password) ->
+    ?BACKEND:authenticate_username_password(Username, Password).
 
-%% @doc Authenticates a client's credentials for a given scope.
--spec authenticate_client(ClientId, ClientSecret, Scope) -> {ok, Identity, NewScope} |
-                                                            {error, Reason} when
+%% @doc Authenticates a client's credentials.
+-spec authenticate_client(ClientId, ClientSecret) -> {ok, Identity} |
+                                                         {error, Reason} when
       ClientId     :: binary(),
       ClientSecret :: binary(),
-      Scope        :: oauth2:scope(),
       Identity     :: term(),
-      NewScope     :: binary(),
-      Reason       :: notfound | badsecret | badscope.
-authenticate_client(ClientId, ClientSecret, Scope) ->
-    ?BACKEND:authenticate_client(ClientId, ClientSecret, Scope).
+      Reason       :: notfound | badsecret.
+authenticate_client(ClientId, ClientSecret) ->
+    ?BACKEND:authenticate_client(ClientId, ClientSecret).
 
 %% @doc Stores a new access code AccessCode, associating it with Context.
 %% The context is a proplist carrying information about the identity
@@ -170,19 +167,17 @@ revoke_refresh_token(RefreshToken) ->
 get_redirection_uri(ClientId) ->
     ?BACKEND:get_redirection_uri(ClientId).
 
-%% @doc Returns a client identity for a given id and scope.
--spec get_client_identity(ClientId, Scope) -> {ok, Identity, NewScope} |
-                                                  {error, Reason} when
+%% @doc Returns a client identity.
+-spec get_client_identity(ClientId) -> {ok, Identity} |
+                                           {error, Reason} when
       ClientId     :: binary(),
-      Scope        :: oauth2:scope(),
       Identity     :: term(),
-      NewScope     :: binary(),
-      Reason       :: notfound | badsecret | badscope.
-get_client_identity(ClientId, Scope) ->
-    ?BACKEND:get_client_identity(ClientId, Scope).
+      Reason       :: notfound | badsecret.
+get_client_identity(ClientId) ->
+    ?BACKEND:get_client_identity(ClientId).
 
-%% @doc Verifies that RedirectionUri matches the redirection URI of client
-%% identified by Identity.
+%% @doc Verifies that RedirectionUri is a valid redirection URI for the
+%% client identified by Identity.
 %% @end
 -spec verify_redirection_uri(Identity, RedirectionUri) -> Result when
       Identity       :: term(),
@@ -190,3 +185,23 @@ get_client_identity(ClientId, Scope) ->
       Result         :: ok | {error, Reason :: term()}.
 verify_redirection_uri(Identity, RedirectionUri) ->
     ?BACKEND:verify_redirection_uri(Identity, RedirectionUri).
+
+%% @doc Verifies that Scope is a valid scope for the client identified 
+%% by Identity.
+%% @end
+-spec verify_client_scope(Identity, Scope) -> Result when
+      Identity       :: term(),
+      Scope          :: oauth2:scope(),
+      Result         :: {ok, Scope2 :: oauth2:scope()} | {error, Reason :: term()}.
+verify_client_scope(Identity, Scope) ->
+    ?BACKEND:verify_client_scope(Identity, Scope).
+
+%% @doc Verifies that Scope is a valid scope for the resource
+%% owner identified by Identity.
+%% @end
+-spec verify_user_scope(Identity, Scope) -> Result when
+      Identity       :: term(),
+      Scope          :: oauth2:scope(),
+      Result         :: {ok, Scope2 :: oauth2:scope()} | {error, Reason :: term()}.
+verify_user_scope(Identity, Scope) ->
+    ?BACKEND:verify_user_scope(Identity, Scope).
