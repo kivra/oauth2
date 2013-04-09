@@ -179,10 +179,10 @@ get_redirection_uri(ClientId) ->
       NewScope     :: binary(),
       Reason       :: notfound | badsecret | badscope.
 get_client_identity(ClientId, Scope) ->
-    ?BACKEND:get_identity(ClientId, Scope).
+    ?BACKEND:get_client_identity(ClientId, Scope).
 
-%% @doc Verifies that RedirectionUri matches the redirection URI registered
-%% for the client identified by ClientId.
+%% @doc Verifies that RedirectionUri matches the redirection URI of client
+%% identified by Identity.
 %% @end
 -spec verify_redirection_uri(Identity, RedirectionUri) -> Result when
       Identity       :: term(),
