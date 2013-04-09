@@ -175,8 +175,8 @@ issue_code_grant(ClientId, ClientSecret, RedirectionUri, ResOwner, Scope) ->
       Response       :: oauth2_response:response(),
       Reason         :: error().
 authorize_code_grant(ClientId, ClientSecret, AccessCode, RedirectionUri) ->
-    case oauth2_backend:authenticate_client(ClientId, ClientSecret, []) of
-        {ok, Identity, _} ->
+    case oauth2_backend:authenticate_client(ClientId, ClientSecret) of
+        {ok, Identity} ->
             case oauth2_backend:verify_redirection_uri(Identity, RedirectionUri) of
                 ok ->
                     case verify_access_code(AccessCode, Identity) of
@@ -290,8 +290,8 @@ refresh_access_token(ClientId, ClientSecret, RefreshToken) ->
             case ExpiryAbsolute > seconds_since_epoch(0) of
                 true ->
                     {_, Identity} = lists:keyfind(<<"identity">>, 1, Context),
-                    case oauth2_backend:authenticate_client(ClientId, ClientSecret, []) of
-                        {ok, Identity, _} ->
+                    case oauth2_backend:authenticate_client(ClientId, ClientSecret) of
+                        {ok, Identity} ->
                             {_, ResOwner} = lists:keyfind(<<"resource_owner">>, 1, Context),
                             {_, Scope} = lists:keyfind(<<"scope">>, 1, Context),
                             TTL = oauth2_config:expiry_time(password_credentials),

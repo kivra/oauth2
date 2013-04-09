@@ -62,7 +62,7 @@
       Username :: binary(),
       Password :: binary(),
       Identity :: term(),
-      Reason   :: notfound | badpass | badscope.
+      Reason   :: notfound | badpass.
 authenticate_username_password(Username, Password) ->
     ?BACKEND:authenticate_username_password(Username, Password).
 
@@ -72,7 +72,7 @@ authenticate_username_password(Username, Password) ->
       ClientId     :: binary(),
       ClientSecret :: binary(),
       Identity     :: term(),
-      Reason       :: notfound | badsecret | badscope.
+      Reason       :: notfound | badsecret.
 authenticate_client(ClientId, ClientSecret) ->
     ?BACKEND:authenticate_client(ClientId, ClientSecret).
 
