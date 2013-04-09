@@ -72,11 +72,16 @@
       Response :: oauth2_response:response(),
       Reason   :: error().
 authorize_password(Username, Password, Scope) ->
-    case oauth2_backend:authenticate_username_password(Username, Password, Scope) of
-        {ok, Identity, Scope2} ->
-            TTL = oauth2_config:expiry_time(password_credentials),
-            Response = issue_token(Identity, <<>>, Scope2, TTL),
-            {ok, Identity, Response};
+    case oauth2_backend:authenticate_username_password(Username, Password) of
+        {ok, Identity} ->
+            case oauth2_backend:verify_user_scope(Identity, Scope) of
+                {ok, Scope2} ->
+                    TTL = oauth2_config:expiry_time(password_credentials),
+                    Response = issue_token(Identity, <<>>, Scope2, TTL),
+                    {ok, Identity, Response};
+                {error, _Reason} ->
+                    {error, invalid_scope}
+            end;
         {error, _Reason} ->
             {error, access_denied}
     end.
@@ -91,8 +96,8 @@ authorize_password(Username, Password, Scope) ->
       Response       :: oauth2_response:response(),
       Reason         :: error().
 issue_code_grant(ClientId, ResOwner, Scope) ->
-    case oauth2_backend:get_client_identity(ClientId, Scope) of
-        {ok, Identity, _Scope2} ->
+    case oauth2_backend:get_client_identity(ClientId) of
+        {ok, Identity} ->
             TTL = oauth2_config:expiry_time(code_grant),
             Response = issue_code(Identity, Scope, ResOwner, TTL),
             {ok, Identity, Response};
@@ -111,8 +116,8 @@ issue_code_grant(ClientId, ResOwner, Scope) ->
       Response       :: oauth2_response:response(),
       Reason         :: error().
 issue_code_grant(ClientId, RedirectionUri, ResOwner, Scope) ->
-    case oauth2_backend:get_client_identity(ClientId, Scope) of
-        {ok, Identity, _Scope2} ->
+    case oauth2_backend:get_client_identity(ClientId) of
+        {ok, Identity} ->
             case oauth2_backend:verify_redirection_uri(Identity, RedirectionUri) of
                 ok ->
                     TTL = oauth2_config:expiry_time(code_grant),
@@ -137,8 +142,8 @@ issue_code_grant(ClientId, RedirectionUri, ResOwner, Scope) ->
       Response       :: oauth2_response:response(),
       Reason         :: error().
 issue_code_grant(ClientId, ClientSecret, RedirectionUri, ResOwner, Scope) ->
-    case oauth2_backend:authenticate_client(ClientId, ClientSecret, Scope) of
-        {ok, Identity, _Scope2} ->
+    case oauth2_backend:authenticate_client(ClientId, ClientSecret) of
+        {ok, Identity} ->
             case oauth2_backend:verify_redirection_uri(Identity, RedirectionUri) of
                 ok ->
                     TTL = oauth2_config:expiry_time(code_grant),
@@ -210,12 +215,17 @@ authorize_code_grant(ClientId, ClientSecret, AccessCode, RedirectionUri) ->
       Response     :: oauth2_response:response(),
       Reason       :: error().
 authorize_client_credentials(ClientId, ClientSecret, Scope) ->
-    case oauth2_backend:authenticate_client(ClientId, ClientSecret, Scope) of
-        {ok, Identity, Scope2} ->
-            %% NOTE: The OAuth2 draft dictates that no refresh token be issued here.
-            TTL = oauth2_config:expiry_time(client_credentials),
-            Response = issue_token(Identity, <<>>, Scope2, TTL),
-            {ok, Identity, Response};
+    case oauth2_backend:authenticate_client(ClientId, ClientSecret) of
+        {ok, Identity} ->
+            case oauth2_backend:verify_client_scope(Identity, Scope) of
+                {ok, Scope2} ->
+                    %% NOTE: The OAuth2 draft dictates that no refresh token be issued here.
+                    TTL = oauth2_config:expiry_time(client_credentials),
+                    Response = issue_token(Identity, <<>>, Scope2, TTL),
+                    {ok, Identity, Response};
+                {error, _Reason} ->
+                    {error, invalid_scope}
+            end;
         {error, _Reason} ->
             {error, invalid_client}
     end.
