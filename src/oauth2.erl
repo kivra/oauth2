@@ -38,7 +38,6 @@
          ,verify_access_code/1
          ,verify_access_code/2
          ,refresh_access_token/3
-         ,verify_redirection_uri/2
         ]).
 
 %%% Exported types
@@ -114,7 +113,7 @@ issue_code_grant(ClientId, ResOwner, Scope) ->
 issue_code_grant(ClientId, RedirectionUri, ResOwner, Scope) ->
     case oauth2_backend:get_client_identity(ClientId, Scope) of
         {ok, Identity, _Scope2} ->
-            case verify_redirection_uri(ClientId, RedirectionUri) of
+            case oauth2_backend:verify_redirection_uri(Identity, RedirectionUri) of
                 ok ->
                     TTL = oauth2_config:expiry_time(code_grant),
                     Response = issue_code(Identity, Scope, ResOwner, TTL),
@@ -140,7 +139,7 @@ issue_code_grant(ClientId, RedirectionUri, ResOwner, Scope) ->
 issue_code_grant(ClientId, ClientSecret, RedirectionUri, ResOwner, Scope) ->
     case oauth2_backend:authenticate_client(ClientId, ClientSecret, Scope) of
         {ok, Identity, _Scope2} ->
-            case verify_redirection_uri(ClientId, RedirectionUri) of
+            case oauth2_backend:verify_redirection_uri(Identity, RedirectionUri) of
                 ok ->
                     TTL = oauth2_config:expiry_time(code_grant),
                     Response = issue_code(Identity, Scope, ResOwner, TTL),
@@ -173,7 +172,7 @@ issue_code_grant(ClientId, ClientSecret, RedirectionUri, ResOwner, Scope) ->
 authorize_code_grant(ClientId, ClientSecret, AccessCode, RedirectionUri) ->
     case oauth2_backend:authenticate_client(ClientId, ClientSecret, []) of
         {ok, Identity, _} ->
-            case verify_redirection_uri(ClientId, RedirectionUri) of
+            case oauth2_backend:verify_redirection_uri(Identity, RedirectionUri) of
                 ok ->
                     case verify_access_code(AccessCode, Identity) of
                         {ok, Context} ->
@@ -318,23 +317,6 @@ verify_access_token(AccessToken) ->
             end;
         _ ->
             {error, access_denied}
-    end.
-
-%% @doc Verifies that RedirectionUri matches the redirection URI registered
-%% for the client identified by ClientId.
-%% @end
--spec verify_redirection_uri(ClientId, RedirectionUri) -> Result when
-      ClientId       :: binary(),
-      RedirectionUri :: binary(),
-      Result         :: ok | {error, Reason :: term()}.
-verify_redirection_uri(ClientId, RedirectionUri) ->
-    case oauth2_backend:get_redirection_uri(ClientId) of
-        {ok, RedirectionUri} ->
-            ok;
-        {ok, _OtherUri} ->
-            {error, mismatch};
-        Error = {error, _} ->
-            Error
     end.
 
 %%%===================================================================
