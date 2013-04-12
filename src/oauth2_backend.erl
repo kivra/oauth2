@@ -138,3 +138,11 @@
       Identity     :: term(),
       NewScope     :: binary(),
       Reason       :: notfound | badsecret | badscope.
+
+%% @doc Verifies that RedirectionUri matches the redirection URI of client
+%% identified by Identity.
+%% @end
+-callback verify_redirection_uri(Identity, RedirectionUri) -> Result when
+      Identity       :: term(),
+      RedirectionUri :: binary(),
+      Result         :: ok | {error, Reason :: term()}.
