@@ -107,35 +107,35 @@ bad_authorize_client_credentials_test_() ->
 bad_ttl_test_() ->
     {setup,
        fun () ->
-                meck:new(oauth2_backend),
-                meck:expect(oauth2_backend,
+                meck:new(oauth2_mock_backend),
+                meck:expect(oauth2_mock_backend,
                             resolve_access_code,
                             fun(_) -> {ok, [{<<"identity">>, <<"123">>},
                                            {<<"resource_owner">>, <<>>},
                                            {<<"expiry_time">>, 123},
                                            {<<"scope">>, <<>>}]}
                             end),
-                meck:expect(oauth2_backend, revoke_access_code, fun(_) -> ok end),
-                meck:expect(oauth2_backend,
+                meck:expect(oauth2_mock_backend, revoke_access_code, fun(_) -> ok end),
+                meck:expect(oauth2_mock_backend,
                             resolve_access_token,
                             fun(_) -> {ok, [{<<"identity">>, <<"123">>},
                                            {<<"resource_owner">>, <<>>},
                                            {<<"expiry_time">>, 123},
                                            {<<"scope">>, <<>>}]}
                             end),
-                meck:expect(oauth2_backend, revoke_access_token, fun(_) -> ok end),
-                meck:expect(oauth2_backend,
+                meck:expect(oauth2_mock_backend, revoke_access_token, fun(_) -> ok end),
+                meck:expect(oauth2_mock_backend,
                             resolve_refresh_token,
                             fun(_) -> {ok, [{<<"identity">>, <<"123">>},
                                            {<<"resource_owner">>, <<>>},
                                            {<<"expiry_time">>, 123},
                                            {<<"scope">>, <<>>}]}
                             end),
-                meck:expect(oauth2_backend, revoke_refresh_token, fun(_) -> ok end),
+                meck:expect(oauth2_mock_backend, revoke_refresh_token, fun(_) -> ok end),
                 ok
         end,
         fun (_) ->
-                 meck:unload(oauth2_backend)
+                 meck:unload(oauth2_mock_backend)
         end,
         fun(_) ->
                 [
@@ -375,48 +375,53 @@ verify_redirection_uri_test_() ->
 start() ->
     %% Set up the ETS table for holding access tokens.
     ets:new(?ETS_TABLE, [public, named_table, {read_concurrency, true}]),
-    meck:new(oauth2_backend),
-    meck:expect(oauth2_backend,
+
+    application:set_env(oauth2, backend, oauth2_mock_backend),
+    application:set_env(oauth2, expiry_time, 3600),
+
+    %% Mock the backend
+    meck:new(oauth2_mock_backend),
+    meck:expect(oauth2_mock_backend,
                 authenticate_username_password,
                 fun authenticate_username_password/3),
-    meck:expect(oauth2_backend,
+    meck:expect(oauth2_mock_backend,
                 authenticate_client,
                 fun authenticate_client/3),
-    meck:expect(oauth2_backend,
+    meck:expect(oauth2_mock_backend,
                 get_client_identity,
                 fun get_client_identity/2),
-	meck:expect(oauth2_backend,
+    meck:expect(oauth2_mock_backend,
                 associate_access_token,
                 fun associate_access_token/2),
-    meck:expect(oauth2_backend,
+    meck:expect(oauth2_mock_backend,
                 associate_refresh_token,
                 fun associate_refresh_token/2),
-    meck:expect(oauth2_backend,
+    meck:expect(oauth2_mock_backend,
                 associate_access_code,
                 fun associate_access_code/2),
-    meck:expect(oauth2_backend,
+    meck:expect(oauth2_mock_backend,
                 resolve_access_token,
                 fun resolve_access_token/1),
-    meck:expect(oauth2_backend,
+    meck:expect(oauth2_mock_backend,
                 resolve_refresh_token,
                 fun resolve_refresh_token/1),
-    meck:expect(oauth2_backend,
+    meck:expect(oauth2_mock_backend,
                 revoke_access_token,
                 fun revoke_access_token/1),
-    meck:expect(oauth2_backend,
+    meck:expect(oauth2_mock_backend,
                 resolve_access_code,
                 fun resolve_access_code/1),
-    meck:expect(oauth2_backend,
+    meck:expect(oauth2_mock_backend,
                 revoke_access_code,
                 fun revoke_access_code/1),
-    meck:expect(oauth2_backend,
+    meck:expect(oauth2_mock_backend,
                 get_redirection_uri,
                 fun get_redirection_uri/1),
     ok.
 
 stop(_State) ->
     ets:delete(?ETS_TABLE),
-    meck:unload(oauth2_backend).
+    meck:unload(oauth2_mock_backend).
 
 %%%===================================================================
 %%% Mockup backend functions
