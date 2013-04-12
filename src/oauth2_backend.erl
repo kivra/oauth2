@@ -41,6 +41,7 @@
          ,revoke_refresh_token/1
          ,get_redirection_uri/1
          ,get_client_identity/2
+         ,verify_redirection_uri/2
         ]).
 
 -type proplist(Key, Val) :: [{Key, Val}].
@@ -178,4 +179,14 @@ get_redirection_uri(ClientId) ->
       NewScope     :: binary(),
       Reason       :: notfound | badsecret | badscope.
 get_client_identity(ClientId, Scope) ->
-    ?BACKEND:get_identity(ClientId, Scope).
+    ?BACKEND:get_client_identity(ClientId, Scope).
+
+%% @doc Verifies that RedirectionUri matches the redirection URI of client
+%% identified by Identity.
+%% @end
+-spec verify_redirection_uri(Identity, RedirectionUri) -> Result when
+      Identity       :: term(),
+      RedirectionUri :: binary(),
+      Result         :: ok | {error, Reason :: term()}.
+verify_redirection_uri(Identity, RedirectionUri) ->
+    ?BACKEND:verify_redirection_uri(Identity, RedirectionUri).
