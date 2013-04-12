@@ -40,8 +40,6 @@
 -define(CLIENT_SCOPE,  <<"abc">>).
 -define(CLIENT_URI,    <<"https://no.where/cb">>).
 
--define(ETS_TABLE, access_tokens).
-
 %%%===================================================================
 %%% Test cases
 %%%===================================================================
@@ -112,35 +110,35 @@ bad_authorize_client_credentials_test_() ->
 bad_ttl_test_() ->
     {setup,
        fun () ->
-                meck:new(oauth2_backend),
-                meck:expect(oauth2_backend,
+                meck:new(oauth2_mock_backend),
+                meck:expect(oauth2_mock_backend,
                             resolve_access_code,
                             fun(_) -> {ok, [{<<"identity">>, <<"123">>},
                                            {<<"resource_owner">>, <<>>},
                                            {<<"expiry_time">>, 123},
                                            {<<"scope">>, <<>>}]}
                             end),
-                meck:expect(oauth2_backend, revoke_access_code, fun(_) -> ok end),
-                meck:expect(oauth2_backend,
+                meck:expect(oauth2_mock_backend, revoke_access_code, fun(_) -> ok end),
+                meck:expect(oauth2_mock_backend,
                             resolve_access_token,
                             fun(_) -> {ok, [{<<"identity">>, <<"123">>},
                                            {<<"resource_owner">>, <<>>},
                                            {<<"expiry_time">>, 123},
                                            {<<"scope">>, <<>>}]}
                             end),
-                meck:expect(oauth2_backend, revoke_access_token, fun(_) -> ok end),
-                meck:expect(oauth2_backend,
+                meck:expect(oauth2_mock_backend, revoke_access_token, fun(_) -> ok end),
+                meck:expect(oauth2_mock_backend,
                             resolve_refresh_token,
                             fun(_) -> {ok, [{<<"identity">>, <<"123">>},
                                            {<<"resource_owner">>, <<>>},
                                            {<<"expiry_time">>, 123},
                                            {<<"scope">>, <<>>}]}
                             end),
-                meck:expect(oauth2_backend, revoke_refresh_token, fun(_) -> ok end),
+                meck:expect(oauth2_mock_backend, revoke_refresh_token, fun(_) -> ok end),
                 ok
         end,
         fun (_) ->
-                 meck:unload(oauth2_backend)
+                 meck:unload(oauth2_mock_backend)
         end,
         fun(_) ->
                 [
@@ -357,133 +355,11 @@ verify_refresh_token_test_() ->
 %%%===================================================================
 
 start() ->
-    %% Set up the ETS table for holding access tokens.
-    ets:new(?ETS_TABLE, [public, named_table, {read_concurrency, true}]),
-    meck:new(oauth2_backend),
-    meck:expect(oauth2_backend,
-                authenticate_username_password,
-                fun authenticate_username_password/2),
-    meck:expect(oauth2_backend,
-                authenticate_client,
-                fun authenticate_client/2),
-    meck:expect(oauth2_backend,
-                get_client_identity,
-                fun get_client_identity/1),
-    meck:expect(oauth2_backend,
-                associate_access_token,
-                fun associate_access_token/2),
-    meck:expect(oauth2_backend,
-                associate_refresh_token,
-                fun associate_refresh_token/2),
-    meck:expect(oauth2_backend,
-                associate_access_code,
-                fun associate_access_code/2),
-    meck:expect(oauth2_backend,
-                resolve_access_token,
-                fun resolve_access_token/1),
-    meck:expect(oauth2_backend,
-                resolve_refresh_token,
-                fun resolve_refresh_token/1),
-    meck:expect(oauth2_backend,
-                revoke_access_token,
-                fun revoke_access_token/1),
-    meck:expect(oauth2_backend,
-                resolve_access_code,
-                fun resolve_access_code/1),
-    meck:expect(oauth2_backend,
-                revoke_access_code,
-                fun revoke_access_code/1),
-    meck:expect(oauth2_backend,
-                get_redirection_uri,
-                fun get_redirection_uri/1),
-    meck:expect(oauth2_backend,
-                verify_redirection_uri,
-                fun verify_redirection_uri/2),
-    meck:expect(oauth2_backend,
-                verify_client_scope,
-                fun verify_client_scope/2),
-    meck:expect(oauth2_backend,
-                verify_user_scope,
-                fun verify_user_scope/2),
+    application:set_env(oauth2, backend, oauth2_mock_backend),
+    application:set_env(oauth2, expiry_time, 3600),
+    oauth2_mock_backend:start(),
     ok.
 
 stop(_State) ->
-    ets:delete(?ETS_TABLE),
-    meck:unload(oauth2_backend).
-
-%%%===================================================================
-%%% Mockup backend functions
-%%%===================================================================
-
-authenticate_username_password(?USER_NAME, ?USER_PASSWORD) ->
-    {ok, {user, 31337}};
-authenticate_username_password(?USER_NAME, _) ->
-    {error, badpass};
-authenticate_username_password(_, _) ->
-    {error, notfound}.
-
-authenticate_client(?CLIENT_ID, ?CLIENT_SECRET) ->
-    {ok, {client, 4711}};
-authenticate_client(?CLIENT_ID, _) ->
-    {error, badsecret};
-authenticate_client(_, _) ->
-    {error, notfound}.
-
-get_client_identity(?CLIENT_ID) ->
-    {ok, {client, 4711}};
-get_client_identity(_) ->
-    {error, notfound}.
-
-associate_access_code(AccessCode, Context) ->
-    associate_access_token(AccessCode, Context).
-
-associate_refresh_token(RefreshToken, Context) ->
-    ets:insert(?ETS_TABLE, {RefreshToken, Context}),
+    oauth2_mock_backend:stop(),
     ok.
-
-associate_access_token(AccessToken, Context) ->
-    ets:insert(?ETS_TABLE, {AccessToken, Context}),
-    ok.
-
-resolve_access_code(AccessCode) ->
-    resolve_access_token(AccessCode).
-
-resolve_refresh_token(RefreshToken) ->
-    resolve_access_token(RefreshToken).
-
-resolve_access_token(AccessToken) ->
-    case ets:lookup(?ETS_TABLE, AccessToken) of
-        [] ->
-            {error, notfound};
-        [{_, Context}] ->
-            {ok, Context}
-    end.
-
-revoke_access_code(AccessCode) ->
-    revoke_access_token(AccessCode).
-
-revoke_access_token(AccessToken) ->
-    ets:delete(?ETS_TABLE, AccessToken),
-    ok.
-
-get_redirection_uri(?CLIENT_ID) ->
-    {ok, ?CLIENT_URI};
-get_redirection_uri(_) ->
-    {error, notfound}.
-
-verify_redirection_uri({client, 4711}, ?CLIENT_URI) ->
-    ok;
-verify_redirection_uri(_, _) ->
-    {error, mismatch}.
-
-verify_client_scope({client, 4711}, []) ->
-    {ok, []};
-verify_client_scope({client, 4711}, ?CLIENT_SCOPE) ->
-    {ok, ?CLIENT_SCOPE};
-verify_client_scope(_, _) ->
-    {error, invalid_scope}.
-
-verify_user_scope({user, 31337}, ?USER_SCOPE) ->
-    {ok, ?USER_SCOPE};
-verify_user_scope(_, _) ->
-    {error, invalid_scope}.

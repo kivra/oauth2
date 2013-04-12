@@ -1,9 +1,13 @@
-# OAuth2
+# OAuth2 (v0.1.0)  [![BuildStatus](https://travis-ci.org/kivra/oauth2.png?branch=master)](https://travis-ci.org/kivra/oauth2)
 This library is designed to simplify the implementation of the server side
 of OAuth2 (http://tools.ietf.org/html/rfc6749). It provides
 **no** support for developing clients. See
 [oauth2_client](https://github.com/kivra/oauth2_client) for support in
 accessing Oauth2 enabled services.
+
+oauth2 is released under the terms of the [MIT][MIT] license
+
+copyright 2012-2013 Kivra
 
 ## tl;dr
 Check out the [examples](https://github.com/kivra/oauth2_example)
@@ -74,15 +78,17 @@ authenticated using a secret key shared between the client and server.
 ## Testing
 If you want to run the EUnit test cases, you can do so with:
 
-    $ rebar -C rebar.tests.config get-deps
-    $ rebar -C rebar.tests.config compile
-    $ rebar -C rebar.tests.config eunit skip_deps=true
+    $ make ct
 
 ## Customization
-The library makes no assumptions as to how you want to implement authentication and persistence of
-users, clients and tokens. Instead, it provides a proxy module (`oauth2_backend`) for directing
-calls to a backend plugin supplied by you. To direct calls to a different backend module,
-simply set `{backend, your_backend_module}` in the `oauth2` section of your app.config.
+The library makes no assumptions as to how you want to implement
+authentication and persistence of users, clients and tokens. Instead, it
+provides a behavior (`oauth2_backend`) with functions that needs to be
+implemented. To direct calls to a different backend module, simply set
+`{backend, your_backend_module}` in the `oauth2` section of your app.config.
+
+Look at [oauth2_mock_backend](test/oauth2_mock_backend.erl) for how a backend
+can be implemented.
 
 The following example demonstrates a basic app.config section for oauth2.
 

@@ -41,7 +41,7 @@
         ]).
 
 %%% Exported types
--type proplist(TyKey, TyVal) :: [{TyKey, TyVal}].
+-type context()  :: proplists:proplist(binary(), term()).
 -type token()    :: binary().
 -type lifetime() :: non_neg_integer().
 -type scope()    :: list(binary()) | binary().
@@ -52,11 +52,14 @@
 
 -export_type([
               token/0
+              ,context/0
               ,lifetime/0
               ,scope/0
               ,error/0
-              ,proplist/2
              ]).
+
+%%% Defines
+-define(BACKEND, (oauth2_config:backend())).
 
 %%%===================================================================
 %%% API functions
@@ -72,9 +75,9 @@
       Response :: oauth2_response:response(),
       Reason   :: error().
 authorize_password(Username, Password, Scope) ->
-    case oauth2_backend:authenticate_username_password(Username, Password) of
+    case ?BACKEND:authenticate_username_password(Username, Password) of
         {ok, Identity} ->
-            case oauth2_backend:verify_user_scope(Identity, Scope) of
+            case ?BACKEND:verify_user_scope(Identity, Scope) of
                 {ok, Scope2} ->
                     TTL = oauth2_config:expiry_time(password_credentials),
                     Response = issue_token(Identity, <<>>, Scope2, TTL),
@@ -96,7 +99,7 @@ authorize_password(Username, Password, Scope) ->
       Response       :: oauth2_response:response(),
       Reason         :: error().
 issue_code_grant(ClientId, ResOwner, Scope) ->
-    case oauth2_backend:get_client_identity(ClientId) of
+    case ?BACKEND:get_client_identity(ClientId) of
         {ok, Identity} ->
             TTL = oauth2_config:expiry_time(code_grant),
             Response = issue_code(Identity, Scope, ResOwner, TTL),
@@ -116,9 +119,9 @@ issue_code_grant(ClientId, ResOwner, Scope) ->
       Response       :: oauth2_response:response(),
       Reason         :: error().
 issue_code_grant(ClientId, RedirectionUri, ResOwner, Scope) ->
-    case oauth2_backend:get_client_identity(ClientId) of
+    case ?BACKEND:get_client_identity(ClientId) of
         {ok, Identity} ->
-            case oauth2_backend:verify_redirection_uri(Identity, RedirectionUri) of
+            case ?BACKEND:verify_redirection_uri(Identity, RedirectionUri) of
                 ok ->
                     TTL = oauth2_config:expiry_time(code_grant),
                     Response = issue_code(Identity, Scope, ResOwner, TTL),
@@ -142,9 +145,9 @@ issue_code_grant(ClientId, RedirectionUri, ResOwner, Scope) ->
       Response       :: oauth2_response:response(),
       Reason         :: error().
 issue_code_grant(ClientId, ClientSecret, RedirectionUri, ResOwner, Scope) ->
-    case oauth2_backend:authenticate_client(ClientId, ClientSecret) of
+    case ?BACKEND:authenticate_client(ClientId, ClientSecret) of
         {ok, Identity} ->
-            case oauth2_backend:verify_redirection_uri(Identity, RedirectionUri) of
+            case ?BACKEND:verify_redirection_uri(Identity, RedirectionUri) of
                 ok ->
                     TTL = oauth2_config:expiry_time(code_grant),
                     Response = issue_code(Identity, Scope, ResOwner, TTL),
@@ -175,9 +178,9 @@ issue_code_grant(ClientId, ClientSecret, RedirectionUri, ResOwner, Scope) ->
       Response       :: oauth2_response:response(),
       Reason         :: error().
 authorize_code_grant(ClientId, ClientSecret, AccessCode, RedirectionUri) ->
-    case oauth2_backend:authenticate_client(ClientId, ClientSecret) of
+    case ?BACKEND:authenticate_client(ClientId, ClientSecret) of
         {ok, Identity} ->
-            case oauth2_backend:verify_redirection_uri(Identity, RedirectionUri) of
+            case ?BACKEND:verify_redirection_uri(Identity, RedirectionUri) of
                 ok ->
                     case verify_access_code(AccessCode, Identity) of
                         {ok, Context} ->
@@ -188,7 +191,7 @@ authorize_code_grant(ClientId, ClientSecret, AccessCode, RedirectionUri) ->
                             Response = issue_token_and_refresh(Identity,
                                                                ResOwner,
                                                                Scope, TTL),
-                            oauth2_backend:revoke_access_code(AccessCode),
+                            ?BACKEND:revoke_access_code(AccessCode),
                             {ok, Identity, Response};
                         Error ->
                             Error
@@ -215,9 +218,9 @@ authorize_code_grant(ClientId, ClientSecret, AccessCode, RedirectionUri) ->
       Response     :: oauth2_response:response(),
       Reason       :: error().
 authorize_client_credentials(ClientId, ClientSecret, Scope) ->
-    case oauth2_backend:authenticate_client(ClientId, ClientSecret) of
+    case ?BACKEND:authenticate_client(ClientId, ClientSecret) of
         {ok, Identity} ->
-            case oauth2_backend:verify_client_scope(Identity, Scope) of
+            case ?BACKEND:verify_client_scope(Identity, Scope) of
                 {ok, Scope2} ->
                     %% NOTE: The OAuth2 draft dictates that no refresh token be issued here.
                     TTL = oauth2_config:expiry_time(client_credentials),
@@ -235,17 +238,17 @@ authorize_client_credentials(ClientId, ClientSecret, Scope) ->
 %% @end
 -spec verify_access_code(AccessCode) -> {ok, Context} | {error, Reason} when
       AccessCode  :: token(),
-      Context     :: proplist(atom(), term()),
+      Context     :: context(),
       Reason      :: error().
 verify_access_code(AccessCode) ->
-    case oauth2_backend:resolve_access_code(AccessCode) of
+    case ?BACKEND:resolve_access_code(AccessCode) of
         {ok, Context} ->
             {_, ExpiryAbsolute} = lists:keyfind(<<"expiry_time">>, 1, Context),
             case ExpiryAbsolute > seconds_since_epoch(0) of
                 true ->
                     {ok, Context};
                 false ->
-                    oauth2_backend:revoke_access_code(AccessCode),
+                    ?BACKEND:revoke_access_code(AccessCode),
                     {error, invalid_grant}
             end;
         _ ->
@@ -259,7 +262,7 @@ verify_access_code(AccessCode) ->
 -spec verify_access_code(AccessCode, Identity) -> {ok, Context} | {error, Reason} when
       AccessCode  :: token(),
       Identity    :: term(),
-      Context     :: proplist(atom(), term()),
+      Context     :: context(),
       Reason      :: error().
 verify_access_code(AccessCode, Identity) ->
     case verify_access_code(AccessCode) of
@@ -284,13 +287,13 @@ verify_access_code(AccessCode, Identity) ->
       Response     :: oauth2_response:response(),
       Reason       :: error().
 refresh_access_token(ClientId, ClientSecret, RefreshToken) ->
-    case oauth2_backend:resolve_refresh_token(RefreshToken) of
+    case ?BACKEND:resolve_refresh_token(RefreshToken) of
         {ok, Context} ->
             {_, ExpiryAbsolute} = lists:keyfind(<<"expiry_time">>, 1, Context),
             case ExpiryAbsolute > seconds_since_epoch(0) of
                 true ->
                     {_, Identity} = lists:keyfind(<<"identity">>, 1, Context),
-                    case oauth2_backend:authenticate_client(ClientId, ClientSecret) of
+                    case ?BACKEND:authenticate_client(ClientId, ClientSecret) of
                         {ok, Identity} ->
                             {_, ResOwner} = lists:keyfind(<<"resource_owner">>, 1, Context),
                             {_, Scope} = lists:keyfind(<<"scope">>, 1, Context),
@@ -300,7 +303,7 @@ refresh_access_token(ClientId, ClientSecret, RefreshToken) ->
                         _ -> {error, access_denied}
                     end;
                 false ->
-                    oauth2_backend:revoke_refresh_token(RefreshToken),
+                    ?BACKEND:revoke_refresh_token(RefreshToken),
                     {error, access_denied}
             end;
         _ ->
@@ -312,17 +315,17 @@ refresh_access_token(ClientId, ClientSecret, RefreshToken) ->
 %% @end
 -spec verify_access_token(AccessToken) -> {ok, Context} | {error, Reason} when
       AccessToken :: token(),
-      Context     :: proplist(atom(), term()),
+      Context     :: context(),
       Reason      :: error().
 verify_access_token(AccessToken) ->
-    case oauth2_backend:resolve_access_token(AccessToken) of
+    case ?BACKEND:resolve_access_token(AccessToken) of
         {ok, Context} ->
             {_, ExpiryAbsolute} = lists:keyfind(<<"expiry_time">>, 1, Context),
             case ExpiryAbsolute > seconds_since_epoch(0) of
                 true ->
                     {ok, Context};
                 false ->
-                    oauth2_backend:revoke_access_token(AccessToken),
+                    ?BACKEND:revoke_access_token(AccessToken),
                     {error, access_denied}
             end;
         _ ->
@@ -342,7 +345,7 @@ issue_code(Identity, Scope, ResOwner, TTL) ->
     AccessCode = oauth2_token:generate(),
     ExpiryAbsolute = seconds_since_epoch(TTL),
     Context = build_context(Identity, ExpiryAbsolute, ResOwner, Scope),
-    ok = oauth2_backend:associate_access_code(AccessCode, Context),
+    ok = ?BACKEND:associate_access_code(AccessCode, Context),
     oauth2_response:new([], TTL, ResOwner, Scope, [], AccessCode).
 
 -spec issue_token_and_refresh(Identity, ResOwner, Scope, TTL) -> oauth2_response:response() when
@@ -355,8 +358,8 @@ issue_token_and_refresh(Identity, ResOwner, Scope, TTL) ->
     RefreshToken = oauth2_token:generate(),
     ExpiryAbsolute = seconds_since_epoch(TTL),
     Context = build_context(Identity, ExpiryAbsolute, ResOwner, Scope),
-    ok = oauth2_backend:associate_access_token(AccessToken, Context),
-    ok = oauth2_backend:associate_refresh_token(RefreshToken, Context),
+    ok = ?BACKEND:associate_access_token(AccessToken, Context),
+    ok = ?BACKEND:associate_refresh_token(RefreshToken, Context),
     oauth2_response:new(AccessToken, TTL, ResOwner, Scope, RefreshToken).
 
 -spec issue_token(Identity, ResOwner, Scope, TTL) -> oauth2_response:response() when
@@ -368,7 +371,7 @@ issue_token(Identity, ResOwner, Scope, TTL) ->
     AccessToken = oauth2_token:generate(),
     ExpiryAbsolute = seconds_since_epoch(TTL),
     Context = build_context(Identity, ExpiryAbsolute, ResOwner, Scope),
-    ok = oauth2_backend:associate_access_token(AccessToken, Context),
+    ok = ?BACKEND:associate_access_token(AccessToken, Context),
     oauth2_response:new(AccessToken, TTL, ResOwner, Scope).
 
 -spec build_context(Identity, ExpiryTime, ResOwner, Scope) -> Context when
@@ -376,7 +379,7 @@ issue_token(Identity, ResOwner, Scope, TTL) ->
       ExpiryTime :: non_neg_integer(),
       ResOwner   :: term(),
       Scope      :: scope(),
-      Context    :: proplist(binary(), term()).
+      Context    :: context().
 build_context(Identity, ExpiryTime, ResOwner, Scope) ->
     [{<<"identity">>, Identity},
      {<<"resource_owner">>, ResOwner},
