@@ -1,9 +1,14 @@
-# OAuth2
+# OAuth2 (v0.1.0)  [![Build
+Status](https://travis-ci.org/kivra/oauth2.png?branch=master)](https://travis-ci.org/kivra/oauth2)
 This library is designed to simplify the implementation of the server side
 of OAuth2 (http://tools.ietf.org/html/rfc6749). It provides
 **no** support for developing clients. See
 [oauth2_client](https://github.com/kivra/oauth2_client) for support in
 accessing Oauth2 enabled services.
+
+oauth2 is released under the terms of the [MIT][MIT] license
+
+copyright 2012-2013 Kivra
 
 ## tl;dr
 Check out the [examples](https://github.com/kivra/oauth2_example)
@@ -74,9 +79,7 @@ authenticated using a secret key shared between the client and server.
 ## Testing
 If you want to run the EUnit test cases, you can do so with:
 
-    $ rebar -C rebar.tests.config get-deps
-    $ rebar -C rebar.tests.config compile
-    $ rebar -C rebar.tests.config eunit skip_deps=true
+    $ make ct
 
 ## Customization
 The library makes no assumptions as to how you want to implement authentication and persistence of
