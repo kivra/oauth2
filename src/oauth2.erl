@@ -77,7 +77,7 @@
 authorize_password(Username, Password, Scope) ->
     case ?BACKEND:authenticate_username_password(Username, Password) of
         {ok, Identity} ->
-            case ?BACKEND:verify_user_scope(Identity, Scope) of
+            case ?BACKEND:verify_resowner_scope(Identity, Scope) of
                 {ok, Scope2} ->
                     TTL = oauth2_config:expiry_time(password_credentials),
                     Response = issue_token(Identity, <<>>, Scope2, TTL),
@@ -346,7 +346,7 @@ issue_code(Identity, Scope, ResOwner, TTL) ->
     ExpiryAbsolute = seconds_since_epoch(TTL),
     Context = build_context(Identity, ExpiryAbsolute, ResOwner, Scope),
     ok = ?BACKEND:associate_access_code(AccessCode, Context),
-    oauth2_response:new([], TTL, ResOwner, Scope, [], AccessCode).
+    oauth2_response:new(<<>>, TTL, ResOwner, Scope, <<>>, AccessCode).
 
 -spec issue_token_and_refresh(Identity, ResOwner, Scope, TTL) -> oauth2_response:response() when
       Identity :: term(),

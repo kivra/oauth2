@@ -153,7 +153,7 @@
 %% @doc Verifies that Scope is a valid scope for the resource
 %% owner identified by Identity.
 %% @end
--callback verify_user_scope(Identity, Scope) -> {ok, Scope2} | {error, Reason} when
+-callback verify_resowner_scope(Identity, Scope) -> {ok, Scope2} | {error, Reason} when
       Identity       :: term(),
       Scope          :: oauth2:scope(),
       Scope2         :: oauth2:scope(),
