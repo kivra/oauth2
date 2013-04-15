@@ -5,7 +5,7 @@ of OAuth2 (http://tools.ietf.org/html/rfc6749). It provides
 [oauth2_client](https://github.com/kivra/oauth2_client) for support in
 accessing Oauth2 enabled services.
 
-oauth2 is released under the terms of the [MIT][MIT] license
+oauth2 is released under the terms of the [MIT](http://en.wikipedia.org/wiki/MIT_License) license
 
 copyright 2012-2013 Kivra
 
@@ -117,6 +117,24 @@ The following example demonstrates a basic app.config section for oauth2.
 
 A complete list of functions that your backend must provide is available by looking
 at `oauth2_backend.erl`, which contains documentation and function specifications.
+
+To implement a custom token generation backend you can change your
+app.config as such:
+
+``` erlang
+
+    [
+        {oauth2, [
+            {token_generation, YOUR_TOKEN_GENERATOR}
+        ]}
+    ].
+
+```
+
+The default token generator is called oauth2_token. To implement your
+own you should create your own module implementing the
+oauth2_token_generation behavior exporting one function
+generate/0.
 
 ## License
 The KIVRA oauth2 library uses an [MIT license](http://en.wikipedia.org/wiki/MIT_License). So go ahead and do what
