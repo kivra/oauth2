@@ -2,7 +2,7 @@
 %%
 %% oauth2: Erlang OAuth 2.0 implementation
 %%
-%% Copyright (c) 2012 KIVRA
+%% Copyright (c) 2012-2013 KIVRA
 %%
 %% Permission is hereby granted, free of charge, to any person obtaining a
 %% copy of this software and associated documentation files (the "Software"),
@@ -27,11 +27,10 @@
 -module(oauth2_config).
 
 %%% API
--export([
-         expiry_time/0
-         ,expiry_time/1
-         ,backend/0
-        ]).
+-export([backend/0]).
+-export([expiry_time/0]).
+-export([expiry_time/1]).
+-export([token_generation/0]).
 
 %% Default time in seconds before an authentication token expires.
 -define(DEFAULT_TOKEN_EXPIRY, 3600).
@@ -65,6 +64,12 @@ expiry_time(Flow) ->
 -spec backend() -> Module :: atom().
 backend() ->
     get_required(backend).
+
+
+%% @doc Gets the backend for generating tokens.
+-spec token_generation() -> Module :: atom().
+token_generation() ->
+    get_optional(token_generation, oauth2_token).
 
 %%%===================================================================
 %%% Internal functions

@@ -2,7 +2,7 @@
 %%
 %% oauth2: Erlang OAuth 2.0 implementation
 %%
-%% Copyright (c) 2012 KIVRA
+%% Copyright (c) 2012-2013 KIVRA
 %%
 %% Permission is hereby granted, free of charge, to any person obtaining a
 %% copy of this software and associated documentation files (the "Software"),
@@ -27,12 +27,14 @@
 -module(oauth2_priv_set).
 
 %%% API
--export([
-         new/1
-         ,union/2
-         ,is_subset/2
-         ,is_member/2
-        ]).
+-export([new/1]).
+-export([union/2]).
+-export([is_subset/2]).
+-export([is_member/2]).
+
+%%%===================================================================
+%%% API
+%%%===================================================================
 
 %% Invariant: Children are sorted increasingly by name.
 -type priv_tree() :: {node, Name :: binary(), Children :: [priv_tree()]} | '*'.

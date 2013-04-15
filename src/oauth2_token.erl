@@ -2,7 +2,7 @@
 %%
 %% oauth2: Erlang OAuth 2.0 implementation
 %%
-%% Copyright (c) 2012 KIVRA
+%% Copyright (c) 2012-2013 KIVRA
 %%
 %% Permission is hereby granted, free of charge, to any person obtaining a
 %% copy of this software and associated documentation files (the "Software"),
@@ -26,25 +26,25 @@
 
 -module(oauth2_token).
 
+-behaviour(oauth2_token_generation).
+
 -include("oauth2.hrl").
 
 %%% API
--export([
-         generate/0
-        ]).
+-export([generate/1]).
 
 %%% Exported for testability
--export([
-         strong_rand_bytes_proxy/1
-        ]).
+-export([strong_rand_bytes_proxy/1]).
+
+-type proplist(Key, Val) :: [{Key, Val}].
 
 %%%===================================================================
 %%% API functions
 %%%===================================================================
 
 %% @doc Generates a random OAuth2 token.
--spec generate() -> Token :: oauth2:token().
-generate() ->
+-spec generate(Context :: proplist(atom(), term())) -> Token :: oauth2:token().
+generate(_Context) ->
     generate_fragment(?TOKEN_LENGTH).
 
 %%%===================================================================
