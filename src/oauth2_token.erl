@@ -36,14 +36,14 @@
 %%% Exported for testability
 -export([strong_rand_bytes_proxy/1]).
 
--type proplist(Key, Val) :: [{Key, Val}].
-
 %%%===================================================================
 %%% API functions
 %%%===================================================================
 
 %% @doc Generates a random OAuth2 token.
--spec generate(Context :: proplist(atom(), term())) -> Token :: oauth2:token().
+-spec generate(Context) -> Token when
+    Context :: oauth2:context(),
+    Token   :: oauth2:token().
 generate(_Context) ->
     generate_fragment(?TOKEN_LENGTH).
 
@@ -51,7 +51,9 @@ generate(_Context) ->
 %%% Internal functions
 %%%===================================================================
 
--spec generate_fragment(N :: integer()) -> binary().
+-spec generate_fragment(N) -> Fragment when
+   N        :: integer(),
+   Fragment :: binary().
 generate_fragment(0) ->
     <<>>;
 generate_fragment(N) ->
@@ -60,7 +62,9 @@ generate_fragment(N) ->
     <<Frag/binary, (generate_fragment(N - byte_size(Frag)))/binary>>.
 
 %% @doc Returns true for alphanumeric ASCII characters, false for all others.
--spec is_alphanum(Char :: char()) -> boolean().
+-spec is_alphanum(Char) -> Result when
+    Char   :: char(),
+    Result :: boolean().
 is_alphanum(C) when C >= 16#30 andalso C =< 16#39 ->
     true;
 is_alphanum(C) when C >= 16#41 andalso C =< 16#5A ->
@@ -73,7 +77,9 @@ is_alphanum(_) ->
 %% @doc Generate N random bytes, using the crypto:strong_rand_bytes
 %% function if sufficient entropy exists. If not, use crypto:rand_bytes
 %% as a fallback.
--spec rand_bytes(N :: non_neg_integer()) -> binary().
+-spec rand_bytes(N) -> Result when
+    N      :: non_neg_integer(),
+    Result :: binary().
 rand_bytes(N) ->
     try
         %% NOTE: Apparently we can't meck away the crypto module,
@@ -86,6 +92,8 @@ rand_bytes(N) ->
     end.
 
 %% @equiv crypto:strong_rand_bytes(N)
--spec strong_rand_bytes_proxy(N :: non_neg_integer()) -> binary().
+-spec strong_rand_bytes_proxy(N) -> Result when
+    N      :: non_neg_integer(),
+    Result :: binary().
 strong_rand_bytes_proxy(N) ->
     crypto:strong_rand_bytes(N).

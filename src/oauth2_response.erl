@@ -50,19 +50,17 @@
 -export([to_proplist/1]).
 
 -record(response, {
-          access_token    :: oauth2:token()
-          ,access_code    :: oauth2:token()
-          ,expires_in     :: oauth2:lifetime()
-          ,resource_owner :: term()
-          ,scope          :: oauth2:scope()
-          ,refresh_token  :: oauth2:token()
+          access_token               :: oauth2:token()
+          ,access_code               :: oauth2:token()
+          ,expires_in                :: oauth2:lifetime()
+          ,resource_owner            :: term()
+          ,scope                     :: oauth2:scope()
+          ,refresh_token             :: oauth2:token()
           ,token_type = <<"bearer">> :: binary()
          }).
 
 -type response() :: #response{}.
--export_type([
-              response/0
-             ]).
+-export_type([response/0]).
 
 %%%===================================================================
 %%% API functions

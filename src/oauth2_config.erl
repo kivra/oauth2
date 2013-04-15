@@ -40,14 +40,17 @@
 %%%===================================================================
 
 %% @doc Gets the default expiry time for access tokens.
--spec expiry_time() -> ExpiryTime :: non_neg_integer().
+-spec expiry_time() -> ExpiryTime when
+   ExpiryTime :: non_neg_integer().
 expiry_time() ->
     get_optional(expiry_time, ?DEFAULT_TOKEN_EXPIRY).
 
 
 %% @doc Gets a specific expiry time for access tokens if available
 %%      returns the default if non found
--spec expiry_time(Flow :: atom()) -> ExpiryTime :: non_neg_integer().
+-spec expiry_time(Flow) -> ExpiryTime when
+    Flow       :: atom(),
+    ExpiryTime :: non_neg_integer().
 expiry_time(Flow) ->
     case application:get_env(oauth2, Flow) of
         undefined ->
@@ -61,13 +64,15 @@ expiry_time(Flow) ->
 
 
 %% @doc Gets the backend for validating passwords, storing tokens, etc.
--spec backend() -> Module :: atom().
+-spec backend() -> Module when
+   Module :: atom().
 backend() ->
     get_required(backend).
 
 
 %% @doc Gets the backend for generating tokens.
--spec token_generation() -> Module :: atom().
+-spec token_generation() -> Module when
+   Module :: atom().
 token_generation() ->
     get_optional(token_generation, oauth2_token).
 
