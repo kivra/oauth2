@@ -29,9 +29,9 @@
 -behavior(oauth2_backend).
 
 %%% Behavior API
--export([authenticate_username_password/3]).
--export([authenticate_client/3]).
--export([get_client_identity/2]).
+-export([authenticate_username_password/2]).
+-export([authenticate_client/2]).
+-export([get_client_identity/1]).
 -export([associate_access_code/2]).
 -export([associate_refresh_token/2]).
 -export([associate_access_token/2]).
@@ -43,6 +43,8 @@
 -export([revoke_refresh_token/1]).
 -export([get_redirection_uri/1]).
 -export([verify_redirection_uri/2]).
+-export([verify_client_scope/2]).
+-export([verify_resowner_scope/2]).
 
 %%% mock_backend-specifics
 -export([start/0]).
@@ -65,33 +67,23 @@
 %%% API
 %%%===================================================================
 
-authenticate_username_password(?USER_NAME, ?USER_PASSWORD, ?USER_SCOPE) ->
-    {ok, {user, 31337}, ?USER_SCOPE};
-authenticate_username_password(?USER_NAME, ?USER_PASSWORD, _) ->
-    {error, badscope};
-authenticate_username_password(?USER_NAME, _, _) ->
+authenticate_username_password(?USER_NAME, ?USER_PASSWORD) ->
+    {ok, {user, 31337}};
+authenticate_username_password(?USER_NAME, _) ->
     {error, badpass};
-authenticate_username_password(_, _, _) ->
+authenticate_username_password(_, _) ->
     {error, notfound}.
 
-authenticate_client(?CLIENT_ID, ?CLIENT_SECRET, []) ->
-    {ok, {client, 4711}, []};
-authenticate_client(?CLIENT_ID, ?CLIENT_SECRET, ?CLIENT_SCOPE) ->
-    {ok, {client, 4711}, ?CLIENT_SCOPE};
-authenticate_client(?CLIENT_ID, ?CLIENT_SECRET, _) ->
-    {error, badscope};
-authenticate_client(?CLIENT_ID, _, _) ->
+authenticate_client(?CLIENT_ID, ?CLIENT_SECRET) ->
+    {ok, {client, 4711}};
+authenticate_client(?CLIENT_ID, _) ->
     {error, badsecret};
-authenticate_client(_, _, _) ->
+authenticate_client(_, _) ->
     {error, notfound}.
 
-get_client_identity(?CLIENT_ID, []) ->
-    {ok, {client, 4711}, []};
-get_client_identity(?CLIENT_ID, ?CLIENT_SCOPE) ->
-    {ok, {client, 4711}, ?CLIENT_SCOPE};
-get_client_identity(?CLIENT_ID, _) ->
-    {error, badscope};
-get_client_identity(_, _) ->
+get_client_identity(?CLIENT_ID) ->
+    {ok, {client, 4711}};
+get_client_identity(_) ->
     {error, notfound}.
 
 associate_access_code(AccessCode, Context) ->
@@ -138,6 +130,18 @@ verify_redirection_uri({client, 4711}, ?CLIENT_URI) ->
     ok;
 verify_redirection_uri(_, _) ->
     {error, mismatch}.
+
+verify_client_scope({client, 4711}, []) ->
+    {ok, []};
+verify_client_scope({client, 4711}, ?CLIENT_SCOPE) ->
+    {ok, ?CLIENT_SCOPE};
+verify_client_scope(_, _) ->
+    {error, invalid_scope}.
+
+verify_resowner_scope({user, 31337}, ?USER_SCOPE) ->
+    {ok, ?USER_SCOPE};
+verify_resowner_scope(_, _) ->
+    {error, invalid_scope}.
 
 start() ->
     %% Set up the ETS table for holding access tokens.
