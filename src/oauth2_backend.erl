@@ -30,28 +30,23 @@
 %%% API functions
 %%%===================================================================
 
-%% @doc Authenticates a combination of username, password and scope.
-%% Returns true if the user's credentials are valid and all items
-%% in scope are within the user's privileges to grant.
+%% @doc Authenticates a combination of username and password.
+%% Returns the resource owner identity if the credentials are valid.
 %% @end
--callback authenticate_username_password(Username, Password, Scope) ->
-                                {ok, Identity, NewScope} | {error, Reason} when
+-callback authenticate_username_password(Username, Password) ->
+                                {ok, Identity} | {error, Reason} when
       Username :: binary(),
       Password :: binary(),
-      Scope    :: oauth2:scope(),
       Identity :: term(),
-      NewScope :: binary(),
-      Reason   :: notfound | badpass | badscope.
+      Reason   :: notfound | badpass.
 
 %% @doc Authenticates a client's credentials for a given scope.
--callback authenticate_client(ClientId, ClientSecret, Scope) ->
-                                {ok, Identity, NewScope} | {error, Reason} when
+-callback authenticate_client(ClientId, ClientSecret) ->
+                                {ok, Identity} | {error, Reason} when
       ClientId     :: binary(),
       ClientSecret :: binary(),
-      Scope        :: oauth2:scope(),
       Identity     :: term(),
-      NewScope     :: binary(),
-      Reason       :: notfound | badsecret | badscope.
+      Reason       :: notfound | badsecret.
 
 %% @doc Stores a new access code AccessCode, associating it with Context.
 %% The context is a proplist carrying information about the identity
@@ -126,23 +121,40 @@
       Reason       :: notfound.
 
 %% @doc Returns the redirection URI associated with the client ClientId.
--callback get_redirection_uri(ClientId) -> Result when
+-callback get_redirection_uri(ClientId) -> {error, Reason} | {ok, RedirectionUri} when
       ClientId :: binary(),
-      Result   :: {error, Reason :: term()} | {ok, RedirectionUri :: binary()}.
+      Reason :: notfound, 
+      RedirectionUri :: binary().
 
-%% @doc Returns a client identity for a given id and scope.
--callback get_client_identity(ClientId, Scope) ->
-                                {ok, Identity, NewScope} | {error, Reason} when
+%% @doc Returns a client identity for a given id.
+-callback get_client_identity(ClientId) ->
+                                {ok, Identity} | {error, Reason} when
       ClientId     :: binary(),
-      Scope        :: oauth2:scope(),
       Identity     :: term(),
-      NewScope     :: binary(),
-      Reason       :: notfound | badsecret | badscope.
+      Reason       :: notfound | badsecret.
 
-%% @doc Verifies that RedirectionUri matches the redirection URI of client
-%% identified by Identity.
+%% @doc Verifies that RedirectionUri is a valid redirection URI for the
+%% client identified by Identity.
 %% @end
--callback verify_redirection_uri(Identity, RedirectionUri) -> Result when
+-callback verify_redirection_uri(Identity, RedirectionUri) -> ok | {error, Reason} when
       Identity       :: term(),
       RedirectionUri :: binary(),
-      Result         :: ok | {error, Reason :: term()}.
+      Reason         :: notfound | baduri.
+
+%% @doc Verifies that Scope is a valid scope for the client identified 
+%% by Identity.
+%% @end
+-callback verify_client_scope(Identity, Scope) -> {ok, Scope2} | {error, Reason} when
+      Identity       :: term(),
+      Scope          :: oauth2:scope(),
+      Scope2         :: oauth2:scope(), 
+      Reason         :: notfound | badscope.
+
+%% @doc Verifies that Scope is a valid scope for the resource
+%% owner identified by Identity.
+%% @end
+-callback verify_resowner_scope(Identity, Scope) -> {ok, Scope2} | {error, Reason} when
+      Identity       :: term(),
+      Scope          :: oauth2:scope(),
+      Scope2         :: oauth2:scope(),
+      Reason         :: notfound | badscope.

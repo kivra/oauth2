@@ -60,7 +60,7 @@ bad_authorize_password_test_() ->
                                  <<"herp">>,
                                  <<"derp">>,
                                  [<<"xyz">>])),
-                 ?_assertMatch({error, access_denied},
+                 ?_assertMatch({error, invalid_scope},
                                oauth2:authorize_password(
                                  <<"herp">>,
                                  <<"derp">>,
@@ -89,6 +89,11 @@ bad_authorize_client_credentials_test_() ->
                                  <<"XoaUdYODRCMyLkdaKkqlmhsl9QQJ4b">>,
                                  <<"fvfDMAwjlruC9rv5FsLjmyrihCcIKJL">>,
                                  <<"abc">>)),
+                 ?_assertMatch({error, invalid_scope},
+                               oauth2:authorize_client_credentials(
+                                 ?CLIENT_ID,
+                                 ?CLIENT_SECRET,
+                                 <<"bad_scope">>)),
                  ?_assertMatch({error, invalid_client},
                                oauth2:authorize_client_credentials(
                                  <<"TiaUdYODLOMyLkdaKkqlmdhsl9QJ94a">>,
