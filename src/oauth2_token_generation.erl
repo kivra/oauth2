@@ -24,14 +24,13 @@
 %%
 %% ----------------------------------------------------------------------------
 
-{application, oauth2,
- [
-  {description, "Erlang OAuth 2.0 implementation"},
-  {vsn, "0.1.0"},
-  {registered, []},
-  {applications, [
-                  kernel,
-                  stdlib
-                 ]},
-  {env, []}
- ]}.
+-module(oauth2_token_generation).
+
+%%%===================================================================
+%%% API functions
+%%%===================================================================
+
+%% @doc Generates a random OAuth2 token.
+-callback generate(Context) -> Token when
+    Context :: oauth2:context(),
+    Token   :: oauth2:token().

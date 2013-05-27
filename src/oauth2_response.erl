@@ -2,7 +2,7 @@
 %%
 %% oauth2: Erlang OAuth 2.0 implementation
 %%
-%% Copyright (c) 2012 KIVRA
+%% Copyright (c) 2012-2013 KIVRA
 %%
 %% Permission is hereby granted, free of charge, to any person obtaining a
 %% copy of this software and associated documentation files (the "Software"),
@@ -30,41 +30,37 @@
 -define(TOKEN_LENGTH, 32).
 
 %%% API
--export([
-         new/1
-         ,new/2
-         ,new/4
-         ,new/5
-         ,new/6
-         ,access_token/1
-         ,access_token/2
-         ,access_code/1
-         ,access_code/2
-         ,refresh_token/1
-         ,refresh_token/2
-         ,resource_owner/1
-         ,resource_owner/2
-         ,expires_in/1
-         ,expires_in/2
-         ,scope/1
-         ,scope/2
-         ,to_proplist/1
-        ]).
+-export([new/1]).
+-export([new/2]).
+-export([new/4]).
+-export([new/5]).
+-export([new/6]).
+-export([access_token/1]).
+-export([access_token/2]).
+-export([access_code/1]).
+-export([access_code/2]).
+-export([refresh_token/1]).
+-export([refresh_token/2]).
+-export([resource_owner/1]).
+-export([resource_owner/2]).
+-export([expires_in/1]).
+-export([expires_in/2]).
+-export([scope/1]).
+-export([scope/2]).
+-export([to_proplist/1]).
 
 -record(response, {
-          access_token    :: oauth2:token()
-          ,access_code    :: oauth2:token()
-          ,expires_in     :: oauth2:lifetime()
-          ,resource_owner :: term()
-          ,scope          :: oauth2:scope()
-          ,refresh_token  :: oauth2:token()
+          access_token               :: oauth2:token()
+          ,access_code               :: oauth2:token()
+          ,expires_in                :: oauth2:lifetime()
+          ,resource_owner            :: term()
+          ,scope                     :: oauth2:scope()
+          ,refresh_token             :: oauth2:token()
           ,token_type = <<"bearer">> :: binary()
          }).
 
 -type response() :: #response{}.
--export_type([
-              response/0
-             ]).
+-export_type([response/0]).
 
 %%%===================================================================
 %%% API functions

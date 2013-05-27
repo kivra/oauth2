@@ -2,7 +2,7 @@
 %%
 %% oauth2: Erlang OAuth 2.0 implementation
 %%
-%% Copyright (c) 2012 KIVRA
+%% Copyright (c) 2012-2013 KIVRA
 %%
 %% Permission is hereby granted, free of charge, to any person obtaining a
 %% copy of this software and associated documentation files (the "Software"),
@@ -153,7 +153,7 @@
 %% @doc Verifies that Scope is a valid scope for the resource
 %% owner identified by Identity.
 %% @end
--callback verify_user_scope(Identity, Scope) -> {ok, Scope2} | {error, Reason} when
+-callback verify_resowner_scope(Identity, Scope) -> {ok, Scope2} | {error, Reason} when
       Identity       :: term(),
       Scope          :: oauth2:scope(),
       Scope2         :: oauth2:scope(),

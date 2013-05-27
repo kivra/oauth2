@@ -2,7 +2,7 @@
 %%
 %% oauth2: Erlang OAuth 2.0 implementation
 %%
-%% Copyright (c) 2012 KIVRA
+%% Copyright (c) 2012-2013 KIVRA
 %%
 %% Permission is hereby granted, free of charge, to any person obtaining a
 %% copy of this software and associated documentation files (the "Software"),
@@ -27,18 +27,16 @@
 -module(oauth2).
 
 %%% API
--export([
-         authorize_password/3
-         ,authorize_client_credentials/3
-         ,authorize_code_grant/4
-         ,issue_code_grant/3
-         ,issue_code_grant/4
-         ,issue_code_grant/5
-         ,verify_access_token/1
-         ,verify_access_code/1
-         ,verify_access_code/2
-         ,refresh_access_token/3
-        ]).
+-export([authorize_password/3]).
+-export([authorize_client_credentials/3]).
+-export([authorize_code_grant/4]).
+-export([issue_code_grant/3]).
+-export([issue_code_grant/4]).
+-export([issue_code_grant/5]).
+-export([verify_access_token/1]).
+-export([verify_access_code/1]).
+-export([verify_access_code/2]).
+-export([refresh_access_token/3]).
 
 %%% Exported types
 -type context()  :: proplists:proplist(binary(), term()).
@@ -60,6 +58,7 @@
 
 %%% Defines
 -define(BACKEND, (oauth2_config:backend())).
+-define(TOKEN, (oauth2_config:token_generation())).
 
 %%%===================================================================
 %%% API functions
@@ -77,7 +76,7 @@
 authorize_password(Username, Password, Scope) ->
     case ?BACKEND:authenticate_username_password(Username, Password) of
         {ok, Identity} ->
-            case ?BACKEND:verify_user_scope(Identity, Scope) of
+            case ?BACKEND:verify_resowner_scope(Identity, Scope) of
                 {ok, Scope2} ->
                     TTL = oauth2_config:expiry_time(password_credentials),
                     Response = issue_token(Identity, <<>>, Scope2, TTL),
@@ -336,41 +335,44 @@ verify_access_token(AccessToken) ->
 %%% Internal functions
 %%%===================================================================
 
--spec issue_code(Identity, Scope, ResOwner, TTL) -> oauth2_response:response() when
+-spec issue_code(Identity, Scope, ResOwner, TTL) -> Response when
       Identity :: term(),
       Scope    :: scope(),
       ResOwner :: term(),
-      TTL      :: non_neg_integer().
+      TTL      :: non_neg_integer(),
+      Response :: oauth2_response:response().
 issue_code(Identity, Scope, ResOwner, TTL) ->
-    AccessCode = oauth2_token:generate(),
     ExpiryAbsolute = seconds_since_epoch(TTL),
     Context = build_context(Identity, ExpiryAbsolute, ResOwner, Scope),
+    AccessCode = ?TOKEN:generate(Context),
     ok = ?BACKEND:associate_access_code(AccessCode, Context),
-    oauth2_response:new([], TTL, ResOwner, Scope, [], AccessCode).
+    oauth2_response:new(<<>>, TTL, ResOwner, Scope, <<>>, AccessCode).
 
--spec issue_token_and_refresh(Identity, ResOwner, Scope, TTL) -> oauth2_response:response() when
+-spec issue_token_and_refresh(Identity, ResOwner, Scope, TTL) -> Response when
       Identity :: term(),
       ResOwner :: term(),
       Scope    :: scope(),
-      TTL      :: non_neg_integer().
+      TTL      :: non_neg_integer(),
+      Response :: oauth2_response:response().
 issue_token_and_refresh(Identity, ResOwner, Scope, TTL) ->
-    AccessToken = oauth2_token:generate(),
-    RefreshToken = oauth2_token:generate(),
     ExpiryAbsolute = seconds_since_epoch(TTL),
     Context = build_context(Identity, ExpiryAbsolute, ResOwner, Scope),
+    AccessToken = ?TOKEN:generate(Context),
+    RefreshToken = ?TOKEN:generate(Context),
     ok = ?BACKEND:associate_access_token(AccessToken, Context),
     ok = ?BACKEND:associate_refresh_token(RefreshToken, Context),
     oauth2_response:new(AccessToken, TTL, ResOwner, Scope, RefreshToken).
 
--spec issue_token(Identity, ResOwner, Scope, TTL) -> oauth2_response:response() when
+-spec issue_token(Identity, ResOwner, Scope, TTL) -> Response when
       Identity :: term(),
       ResOwner :: term(),
       Scope    :: scope(),
-      TTL      :: non_neg_integer().
+      TTL      :: non_neg_integer(),
+      Response :: oauth2_response:response().
 issue_token(Identity, ResOwner, Scope, TTL) ->
-    AccessToken = oauth2_token:generate(),
     ExpiryAbsolute = seconds_since_epoch(TTL),
     Context = build_context(Identity, ExpiryAbsolute, ResOwner, Scope),
+    AccessToken = ?TOKEN:generate(Context),
     ok = ?BACKEND:associate_access_token(AccessToken, Context),
     oauth2_response:new(AccessToken, TTL, ResOwner, Scope).
 

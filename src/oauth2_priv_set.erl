@@ -2,7 +2,7 @@
 %%
 %% oauth2: Erlang OAuth 2.0 implementation
 %%
-%% Copyright (c) 2012 KIVRA
+%% Copyright (c) 2012-2013 KIVRA
 %%
 %% Permission is hereby granted, free of charge, to any person obtaining a
 %% copy of this software and associated documentation files (the "Software"),
@@ -27,12 +27,14 @@
 -module(oauth2_priv_set).
 
 %%% API
--export([
-         new/1
-         ,union/2
-         ,is_subset/2
-         ,is_member/2
-        ]).
+-export([new/1]).
+-export([union/2]).
+-export([is_subset/2]).
+-export([is_member/2]).
+
+%%%===================================================================
+%%% API
+%%%===================================================================
 
 %% Invariant: Children are sorted increasingly by name.
 -type priv_tree() :: {node, Name :: binary(), Children :: [priv_tree()]} | '*'.
@@ -43,7 +45,9 @@
 %% @doc Constructs a new priv_set from a single path or a list of paths.
 %% A path denotes a single privilege.
 %% @end
--spec new(Paths :: binary() | [binary()]) -> priv_set().
+-spec new(Paths) -> PrivSet when
+    Paths   :: binary() | [binary()],
+    PrivSet :: priv_set().
 new(Paths) when is_list(Paths) ->
     lists:foldl(fun union/2, [], [make_forest(Path) || Path <- Paths]);
 new(Path) when is_binary(Path) ->
@@ -52,7 +56,10 @@ new(Path) when is_binary(Path) ->
 %% @doc Returns the union of Set1 and Set2, i.e., a set such that
 %% any path present in either Set1 or Set2 is also present in the result.
 %% @end
--spec union(Set1 :: priv_set(), Set2 :: priv_set()) -> Union :: priv_set().
+-spec union(Set1, Set2) -> Union when
+    Set1  :: priv_set(),
+    Set2  :: priv_set(),
+    Union :: priv_set().
 union([H1={node, Name1, _}|T1], [H2={node, Name2, _}|T2]) when Name1 < Name2 ->
     [H1|union(T1, [H2|T2])];
 union([H1={node, Name1, _}|T1], [H2={node, Name2, _}|T2]) when Name1 > Name2 ->
@@ -71,7 +78,10 @@ union(Set, []) ->
 %% @doc Return true if Set1 is a subset of Set2, i.e., if
 %% every privilege held by Set1 is also held by Set2.
 %% @end
--spec is_subset(Set1 :: priv_set(), Set2 :: priv_set()) -> boolean().
+-spec is_subset(Set1, Set2) -> Result when
+    Set1   :: priv_set(),
+    Set2   :: priv_set(),
+    Result :: boolean().
 is_subset([{node, Name1, _}|_], [{node, Name2, _}|_]) when Name1 < Name2 ->
     false; %% This tree isn't present in Set2 as per the invariant.
 is_subset(Set1 = [{node, Name1, _}|_], [{node, Name2, _}|T2]) when Name1 > Name2 ->
@@ -95,7 +105,10 @@ is_subset(_, _) ->
 %% @doc Returns true if Path is present in Set, i.e, if
 %% the privilege denoted by Path is contained within Set.
 %% @end
--spec is_member(Path :: binary(), Set :: priv_set()) -> boolean().
+-spec is_member(Path, Set) -> Result when
+    Path   :: binary(),
+    Set    :: priv_set(),
+    Result ::  boolean().
 is_member(Path, Set) ->
     is_subset(make_forest(Path), Set).
 
@@ -103,13 +116,17 @@ is_member(Path, Set) ->
 %%% Internal functions
 %%%===================================================================
 
--spec make_forest(Path :: binary() | list()) -> priv_set().
+-spec make_forest(Path) -> Forest when
+    Path   :: binary() | list(),
+    Forest :: priv_set().
 make_forest(Path) when is_binary(Path) ->
     make_forest(binary:split(Path, <<".">>, [global]));
 make_forest(Path) when is_list(Path) ->
     [make_tree(Path)].
 
--spec make_tree(Path :: [binary()]) -> priv_tree().
+-spec make_tree(Path) -> Tree when
+    Path :: [binary()],
+    Tree :: priv_tree().
 make_tree([<<"*">>|_]) ->
     '*';
 make_tree([N]) ->
@@ -117,6 +134,9 @@ make_tree([N]) ->
 make_tree([H|T]) ->
     make_node(H, [make_tree(T)]).
 
--spec make_node(Name :: binary(), Children :: [priv_tree()]) -> priv_tree().
+-spec make_node(Name, Children) -> Node when
+    Name     :: binary(),
+    Children :: [priv_tree()],
+    Node     :: priv_tree().
 make_node(Name, Children) ->
     {node, Name, Children}.

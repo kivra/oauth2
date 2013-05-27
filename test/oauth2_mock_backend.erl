@@ -2,7 +2,7 @@
 %%
 %% oauth2: Erlang OAuth 2.0 implementation
 %%
-%% Copyright (c) 2012 KIVRA
+%% Copyright (c) 2012-2013 KIVRA
 %%
 %% Permission is hereby granted, free of charge, to any person obtaining a
 %% copy of this software and associated documentation files (the "Software"),
@@ -44,7 +44,7 @@
 -export([get_redirection_uri/1]).
 -export([verify_redirection_uri/2]).
 -export([verify_client_scope/2]).
--export([verify_user_scope/2]).
+-export([verify_resowner_scope/2]).
 
 %%% mock_backend-specifics
 -export([start/0]).
@@ -138,9 +138,9 @@ verify_client_scope({client, 4711}, ?CLIENT_SCOPE) ->
 verify_client_scope(_, _) ->
     {error, invalid_scope}.
 
-verify_user_scope({user, 31337}, ?USER_SCOPE) ->
+verify_resowner_scope({user, 31337}, ?USER_SCOPE) ->
     {ok, ?USER_SCOPE};
-verify_user_scope(_, _) ->
+verify_resowner_scope(_, _) ->
     {error, invalid_scope}.
 
 start() ->
