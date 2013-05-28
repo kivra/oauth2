@@ -30,8 +30,6 @@
 -export([authorize_password/3]).
 -export([authorize_client_credentials/3]).
 -export([authorize_code_grant/4]).
--export([issue_code_grant/3]).
--export([issue_code_grant/4]).
 -export([issue_code_grant/5]).
 -export([verify_access_token/1]).
 -export([verify_access_code/1]).
@@ -89,70 +87,39 @@ authorize_password(Username, Password, Scope) ->
     end.
 
 %% @doc Issue a Code via Access Code Grant
--spec issue_code_grant(ClientId, ResOwner, Scope)
+-spec issue_code_grant(ClientId, RedirectionUri, Username, Password, Scope)
                        -> {ok, Identity, Response} | {error, Reason} when
-      ClientId       :: binary(),
-      ResOwner       :: term(),
-      Scope          :: scope(),
-      Identity       :: term(),
-      Response       :: oauth2_response:response(),
-      Reason         :: error().
-issue_code_grant(ClientId, ResOwner, Scope) ->
-    case ?BACKEND:get_client_identity(ClientId) of
-        {ok, Identity} ->
-            TTL = oauth2_config:expiry_time(code_grant),
-            Response = issue_code(Identity, Scope, ResOwner, TTL),
-            {ok, Identity, Response};
-        {error, _Reason} ->
-            {error, invalid_client}
-    end.
-
-%% @doc Issue a Code via Access Code Grant
--spec issue_code_grant(ClientId, RedirectionUri, ResOwner, Scope)
-                       -> {ok, Identity, Response} | {error, Reason} when
-      ClientId       :: binary(),
-      RedirectionUri :: scope(),
-      ResOwner       :: term(),
-      Scope          :: scope(),
-      Identity       :: term(),
-      Response       :: oauth2_response:response(),
-      Reason         :: error().
-issue_code_grant(ClientId, RedirectionUri, ResOwner, Scope) ->
+      ClientId          :: binary(),
+      RedirectionUri    :: scope(),
+      Username          :: binary(),
+      Password          :: binary(),
+      Scope             :: scope(),
+      Identity          :: term(),
+      Response          :: oauth2_response:response(),
+      Reason            :: error().
+issue_code_grant(ClientId, RedirectionUri, Username, Password, Scope) ->
     case ?BACKEND:get_client_identity(ClientId) of
         {ok, Identity} ->
             case ?BACKEND:verify_redirection_uri(Identity, RedirectionUri) of
                 ok ->
-                    TTL = oauth2_config:expiry_time(code_grant),
-                    Response = issue_code(Identity, Scope, ResOwner, TTL),
-                    {ok, Identity, Response};
+                    case ?BACKEND:verify_client_scope(Identity, Scope) of
+                        {ok, VerifiedScope} ->
+                            case ?BACKEND:authenticate_username_password(
+                                   Username, Password) of
+                                {ok, ResOwner} ->
+                                    TTL = oauth2_config:expiry_time(code_grant),
+                                    Response = issue_code(Identity, 
+                                                          VerifiedScope, 
+                                                          ResOwner, TTL),
+                                    {ok, Identity, Response};
+                                {error, _Reason} ->
+                                    {error, access_denied}
+                            end;
+                        {error, _Reason} ->
+                            {error, invalid_scope}
+                    end;
                 _ ->
-                    {error, access_denied}
-            end;
-        {error, _Reason} ->
-            {error, invalid_client}
-    end.
-
-%% @doc Issue a Code via Access Code Grant.
--spec issue_code_grant(ClientId, ClientSecret, RedirectionUri, ResOwner, Scope)
-                       -> {ok, Identity, Response} | {error, Reason} when
-      ClientId       :: binary(),
-      ClientSecret   :: binary(),
-      RedirectionUri :: scope(),
-      ResOwner       :: term(),
-      Scope          :: scope(),
-      Identity       :: term(),
-      Response       :: oauth2_response:response(),
-      Reason         :: error().
-issue_code_grant(ClientId, ClientSecret, RedirectionUri, ResOwner, Scope) ->
-    case ?BACKEND:authenticate_client(ClientId, ClientSecret) of
-        {ok, Identity} ->
-            case ?BACKEND:verify_redirection_uri(Identity, RedirectionUri) of
-                ok ->
-                    TTL = oauth2_config:expiry_time(code_grant),
-                    Response = issue_code(Identity, Scope, ResOwner, TTL),
-                    {ok, Identity, Response};
-                _ ->
-                    {error, access_denied}
+                    {error, unauthorized_client}
             end;
         {error, _Reason} ->
             {error, unauthorized_client}

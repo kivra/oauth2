@@ -182,57 +182,35 @@ bad_access_code_test_() ->
      fun(_) ->
              [
               fun() ->
-                      {error, access_denied} = oauth2:issue_code_grant(
+                      {error, unauthorized_client} = oauth2:issue_code_grant(
                                          ?CLIENT_ID,
-                                         ?CLIENT_SECRET,
                                          <<"http://in.val.id">>,
-                                         ?RESOURCE_OWNER,
+                                         ?USER_NAME,
+                                         ?USER_PASSWORD,
                                          ?CLIENT_SCOPE),
                       {error, unauthorized_client} = oauth2:issue_code_grant(
                                          <<"XoaUdYODRCMyLkdaKkqlmhsl9QQJ4b">>,
-                                         ?CLIENT_SECRET,
                                          ?CLIENT_URI,
-                                         ?RESOURCE_OWNER,
+                                         ?USER_NAME,
+                                         ?USER_PASSWORD,
                                          ?CLIENT_SCOPE),
-                      ?_assertMatch({error, invalid_grant},
-                                    oauth2:verify_access_code(<<"nonexistent_token">>))
-              end
-             ]
-     end}.
-
-bad_access_code_icg3_test_() ->
-    {setup,
-     fun start/0,
-     fun stop/1,
-     fun(_) ->
-             [
-              fun() ->
-                      {error, invalid_client} = oauth2:issue_code_grant(
-                                         <<"XoaUdYODRCMyLkdaKkqlmhsl9QQJ4b">>,
-                                         ?RESOURCE_OWNER,
-                                         ?CLIENT_SCOPE),
-                      ?_assertMatch({error, invalid_grant},
-                                    oauth2:verify_access_code(<<"nonexistent_token">>))
-              end
-             ]
-     end}.
-
-bad_access_code_icg4_test_() ->
-    {setup,
-     fun start/0,
-     fun stop/1,
-     fun(_) ->
-             [
-              fun() ->
+                      {error, invalid_scope} = oauth2:issue_code_grant(
+                                         ?CLIENT_ID,
+                                         ?CLIENT_URI,
+                                         ?USER_NAME,
+                                         ?USER_PASSWORD,
+                                         <<"bad_scope">>),
                       {error, access_denied} = oauth2:issue_code_grant(
                                          ?CLIENT_ID,
-                                         <<"http://in.val.id">>,
-                                         ?RESOURCE_OWNER,
-                                         ?CLIENT_SCOPE),
-                      {error, invalid_client} = oauth2:issue_code_grant(
-                                         <<"XoaUdYODRCMyLkdaKkqlmhsl9QQJ4b">>,
                                          ?CLIENT_URI,
-                                         ?RESOURCE_OWNER,
+                                         <<"herp">>,
+                                         <<"herp">>,
+                                         ?CLIENT_SCOPE),
+                      {error, access_denied} = oauth2:issue_code_grant(
+                                         ?CLIENT_ID,
+                                         ?CLIENT_URI,
+                                         <<"derp">>,
+                                         <<"derp">>,
                                          ?CLIENT_SCOPE),
                       ?_assertMatch({error, invalid_grant},
                                     oauth2:verify_access_code(<<"nonexistent_token">>))
@@ -249,65 +227,12 @@ verify_access_code_test_() ->
               fun() ->
                       {ok, _, Response} = oauth2:issue_code_grant(
                                          ?CLIENT_ID,
-                                         ?CLIENT_SECRET,
                                          ?CLIENT_URI,
-                                         ?RESOURCE_OWNER,
+                                         ?USER_NAME,
+                                         ?USER_PASSWORD,
                                          ?CLIENT_SCOPE),
                       {ok, Code} = oauth2_response:access_code(Response),
-                      ?assertMatch({ok, ?RESOURCE_OWNER},
-                                   oauth2_response:resource_owner(Response)),
-                      ?assertMatch({ok, _}, oauth2:verify_access_code(Code)),
-                      {ok, _, Response2} = oauth2:authorize_code_grant(
-                                         ?CLIENT_ID,
-                                         ?CLIENT_SECRET,
-                                         Code,
-                                         ?CLIENT_URI),
-                      {ok, Token} = oauth2_response:access_token(Response2),
-                      ?assertMatch({ok, _}, oauth2:verify_access_token(Token))
-              end
-             ]
-     end}.
-
-verify_access_code_icg3_test_() ->
-    {setup,
-     fun start/0,
-     fun stop/1,
-     fun(_) ->
-             [
-              fun() ->
-                      {ok, _, Response} = oauth2:issue_code_grant(
-                                         ?CLIENT_ID,
-                                         ?RESOURCE_OWNER,
-                                         ?CLIENT_SCOPE),
-                      {ok, Code} = oauth2_response:access_code(Response),
-                      ?assertMatch({ok, ?RESOURCE_OWNER},
-                                   oauth2_response:resource_owner(Response)),
-                      ?assertMatch({ok, _}, oauth2:verify_access_code(Code)),
-                      {ok, _, Response2} = oauth2:authorize_code_grant(
-                                         ?CLIENT_ID,
-                                         ?CLIENT_SECRET,
-                                         Code,
-                                         ?CLIENT_URI),
-                      {ok, Token} = oauth2_response:access_token(Response2),
-                      ?assertMatch({ok, _}, oauth2:verify_access_token(Token))
-              end
-             ]
-     end}.
-
-verify_access_code_icg4_test_() ->
-    {setup,
-     fun start/0,
-     fun stop/1,
-     fun(_) ->
-             [
-              fun() ->
-                      {ok, _, Response} = oauth2:issue_code_grant(
-                                         ?CLIENT_ID,
-                                         ?CLIENT_URI,
-                                         ?RESOURCE_OWNER,
-                                         ?CLIENT_SCOPE),
-                      {ok, Code} = oauth2_response:access_code(Response),
-                      ?assertMatch({ok, ?RESOURCE_OWNER},
+                      ?assertMatch({ok, {user, 31337}},
                                    oauth2_response:resource_owner(Response)),
                       ?assertMatch({ok, _}, oauth2:verify_access_code(Code)),
                       {ok, _, Response2} = oauth2:authorize_code_grant(
@@ -330,9 +255,9 @@ verify_refresh_token_test_() ->
               fun() ->
                       {ok, _, Response} = oauth2:issue_code_grant(
                                          ?CLIENT_ID,
-                                         ?CLIENT_SECRET,
                                          ?CLIENT_URI,
-                                         ?RESOURCE_OWNER,
+                                         ?USER_NAME,
+                                         ?USER_PASSWORD,
                                          ?CLIENT_SCOPE),
                       {ok, Code} = oauth2_response:access_code(Response),
                       {ok, _, Response2} = oauth2:authorize_code_grant(
