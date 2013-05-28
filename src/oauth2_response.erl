@@ -53,12 +53,12 @@
 
 
 -record(response, {
-          access_token    :: oauth2:token()
-          ,access_code    :: oauth2:token()
-          ,expires_in     :: oauth2:lifetime()
-          ,resource_owner :: term()
-          ,scope          :: oauth2:scope()
-          ,refresh_token  :: oauth2:token()
+          access_token              :: oauth2:token()
+          ,access_code              :: oauth2:token()
+          ,expires_in               :: oauth2:lifetime()
+          ,resource_owner           :: term()
+          ,scope                    :: oauth2:scope()
+          ,refresh_token            :: oauth2:token()
           ,token_type = ?TOKEN_TYPE :: binary()
          }).
 
