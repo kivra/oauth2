@@ -35,6 +35,8 @@
 -define(RESOURCE_OWNER, <<"user">>).
 -define(EXPIRY,  3600).
 -define(SCOPE,   <<"herp derp">>).
+-define(TOKEN_TYPE, <<"bearer">>).
+
 
 %%%===================================================================
 %%% Test cases
@@ -154,6 +156,10 @@ resource_owner_test() ->
                    oauth2_response:resource_owner(
                      oauth2_response:new(?ACCESS),
                      ?RESOURCE_OWNER))).
+
+token_type_test() ->
+    ?assertEqual({ok, ?TOKEN_TYPE},
+                 oauth2_response:token_type(oauth2_response:new(?ACCESS))).
 
 to_proplist_test() ->
     Response = oauth2_response:new(?ACCESS, ?EXPIRY, ?RESOURCE_OWNER, ?SCOPE, ?REFRESH),
