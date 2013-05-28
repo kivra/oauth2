@@ -28,6 +28,7 @@
 
 %% Length of binary data to use for token generation.
 -define(TOKEN_LENGTH, 32).
+-define(TOKEN_TYPE, <<"bearer">>).
 
 %%% API
 -export([new/1]).
@@ -47,16 +48,18 @@
 -export([expires_in/2]).
 -export([scope/1]).
 -export([scope/2]).
+-export([token_type/1]).
 -export([to_proplist/1]).
 
+
 -record(response, {
-          access_token               :: oauth2:token()
-          ,access_code               :: oauth2:token()
-          ,expires_in                :: oauth2:lifetime()
-          ,resource_owner            :: term()
-          ,scope                     :: oauth2:scope()
-          ,refresh_token             :: oauth2:token()
-          ,token_type = <<"bearer">> :: binary()
+          access_token              :: oauth2:token()
+          ,access_code              :: oauth2:token()
+          ,expires_in               :: oauth2:lifetime()
+          ,resource_owner           :: term()
+          ,scope                    :: oauth2:scope()
+          ,refresh_token            :: oauth2:token()
+          ,token_type = ?TOKEN_TYPE :: binary()
          }).
 
 -type response() :: #response{}.
@@ -182,6 +185,10 @@ resource_owner(#response{resource_owner = ResOwner}) ->
     NewResOwner :: term().
 resource_owner(Response, NewResOwner) ->
     Response#response{resource_owner = NewResOwner}.
+
+-spec token_type(response()) -> {ok, binary()}.
+token_type(#response{}) ->
+    {ok, ?TOKEN_TYPE}.
 
 -spec to_proplist(response()) -> oauth2:proplist(binary(), binary()).
 to_proplist(Response) ->
