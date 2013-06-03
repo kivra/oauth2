@@ -121,7 +121,7 @@ authorize_client_credentials(ClientId, ClientSecret, Scope) ->
                     {error, invalid_scope}
             end;
         {error, _Reason} ->
-            {error, invalid_client}
+            {error, unauthorized_client}
     end.
 
 %% @doc Authorize client via its own credentials, i.e., a combination
@@ -164,7 +164,7 @@ authorize_code_grant(ClientId, ClientSecret, AccessCode, RedirectionUri) ->
                     {error, invalid_grant}
             end;
         {error, _Reason} ->
-            {error, invalid_client}
+            {error, unauthorized_client}
     end.
 
 %% @doc Issue a Code via Access Code Grant
