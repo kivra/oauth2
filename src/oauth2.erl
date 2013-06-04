@@ -44,9 +44,9 @@
 -type token()    :: binary().
 -type lifetime() :: non_neg_integer().
 -type scope()    :: list(binary()) | binary().
--type error()    :: invalid_request | unauthorized_client
-                  | access_denied | unsupported_response_type
-                  | invalid_scope | server_error
+-type error()    :: access_denied | invalid_client | invalid_request 
+                  | invalid_scope | unauthorized_client
+                  | unsupported_response_type | server_error
                   | temporarily_unavailable.
 
 -export_type([
@@ -121,7 +121,7 @@ authorize_client_credentials(ClientId, ClientSecret, Scope) ->
                     {error, invalid_scope}
             end;
         {error, _Reason} ->
-            {error, unauthorized_client}
+            {error, invalid_client}
     end.
 
 %% @doc Authorize client via its own credentials, i.e., a combination
@@ -164,7 +164,7 @@ authorize_code_grant(ClientId, ClientSecret, AccessCode, RedirectionUri) ->
                     {error, invalid_grant}
             end;
         {error, _Reason} ->
-            {error, unauthorized_client}
+            {error, invalid_client}
     end.
 
 %% @doc Issue a Code via Access Code Grant
@@ -204,7 +204,7 @@ authorize_code_request(ClientId, RedirectionUri, Username, Password, Scope) ->
                     {error, unauthorized_client}
             end;
         {error, _Reason} ->
-            {error, unauthorized_client}
+            {error, invalid_client}
     end.
 
 -spec issue_code(Authorization) -> Response when

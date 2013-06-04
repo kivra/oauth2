@@ -84,7 +84,7 @@ bad_authorize_client_credentials_test_() ->
         fun stop/1,
         fun(_) ->
                 [
-                 ?_assertMatch({error, unauthorized_client},
+                 ?_assertMatch({error, invalid_client},
                                oauth2:authorize_client_credentials(
                                  <<"XoaUdYODRCMyLkdaKkqlmhsl9QQJ4b">>,
                                  <<"fvfDMAwjlruC9rv5FsLjmyrihCcIKJL">>,
@@ -94,12 +94,12 @@ bad_authorize_client_credentials_test_() ->
                                  ?CLIENT_ID,
                                  ?CLIENT_SECRET,
                                  <<"bad_scope">>)),
-                 ?_assertMatch({error, unauthorized_client},
+                 ?_assertMatch({error, invalid_client},
                                oauth2:authorize_client_credentials(
                                  <<"TiaUdYODLOMyLkdaKkqlmdhsl9QJ94a">>,
                                  <<"gggDMAwklAKc9kq5FsLjKrzihCcI123">>,
                                  <<"abc">>)),
-                 ?_assertMatch({error, unauthorized_client},
+                 ?_assertMatch({error, invalid_client},
                                 oauth2:authorize_client_credentials(
                                  <<"TiaUdYODLOMyLkdaKkqlmdhsl9QJ94a">>,
                                  <<"fvfDMAwjlruC9rv5FsLjmyrihCcIKJL">>,
@@ -190,7 +190,7 @@ bad_access_code_test_() ->
                                          ?USER_NAME,
                                          ?USER_PASSWORD,
                                          ?CLIENT_SCOPE),
-                      {error, unauthorized_client} = 
+                      {error, invalid_client} = 
                           oauth2:authorize_code_request(
                                          <<"XoaUdYODRCMyLkdaKkqlmhsl9QQJ4b">>,
                                          ?CLIENT_URI,
