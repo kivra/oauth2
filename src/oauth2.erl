@@ -44,7 +44,7 @@
 -type token()    :: binary().
 -type lifetime() :: non_neg_integer().
 -type scope()    :: list(binary()) | binary().
--type error()    :: access_denied | invalid_client | invalid_request 
+-type error()    :: access_denied | invalid_client | invalid_request
                   | invalid_scope | unauthorized_client
                   | unsupported_response_type | server_error
                   | temporarily_unavailable.
@@ -100,7 +100,6 @@ authorize_password(Username, Password, Scope) ->
 %% of a public client identifier and a shared client secret.
 %% Should only be used for confidential clients; see the OAuth2 draft
 %% for clarification.
-%% @end
 -spec authorize_client_credentials(ClientId, ClientSecret, Scope)
                                   -> {ok, Authorization}
                                    | {error, Reason} when
@@ -131,7 +130,6 @@ authorize_client_credentials(ClientId, ClientSecret, Scope) ->
 %%
 %% Then verify the supplied RedirectionUri and Code and if valid issue
 %% an Access Token and an optional Refresh Token
-%% @end
 -spec authorize_code_grant(ClientId, ClientSecret, AccessCode, RedirectionUri)
                                   -> {ok, Authorization}
                                    | {error, Reason} when
@@ -168,8 +166,8 @@ authorize_code_grant(ClientId, ClientSecret, AccessCode, RedirectionUri) ->
     end.
 
 %% @doc Issue a Code via Access Code Grant
--spec authorize_code_request(ClientId, RedirectionUri, Username, Password, 
-                             Scope)
+-spec authorize_code_request( ClientId, RedirectionUri
+                            , Username, Password, Scope )
                        -> {ok, Authorization} | {error, Reason} when
       ClientId          :: binary(),
       RedirectionUri    :: scope(),
@@ -189,7 +187,6 @@ authorize_code_request(ClientId, RedirectionUri, Username, Password, Scope) ->
                                    Username, Password) of
                                 {ok, ResOwner} ->
                                     TTL = oauth2_config:expiry_time(code_grant),
-                                    
                                     {ok, #authorization{client = Client,
                                                         resowner = ResOwner,
                                                         scope = VerifiedScope,
@@ -210,7 +207,7 @@ authorize_code_request(ClientId, RedirectionUri, Username, Password, Scope) ->
 -spec issue_code(Authorization) -> Response when
       Authorization :: #authorization{},
       Response :: oauth2_response:response().
-issue_code(#authorization{client = Client, resowner = ResOwner, 
+issue_code(#authorization{client = Client, resowner = ResOwner,
                            scope = Scope, ttl = TTL}) ->
     ExpiryAbsolute = seconds_since_epoch(TTL),
     Context = build_context(Client, ExpiryAbsolute, ResOwner, Scope),
@@ -221,7 +218,7 @@ issue_code(#authorization{client = Client, resowner = ResOwner,
 -spec issue_token(Authorization) -> Response when
       Authorization :: #authorization{},
       Response :: oauth2_response:response().
-issue_token(#authorization{client = Client, resowner = ResOwner, 
+issue_token(#authorization{client = Client, resowner = ResOwner,
                            scope = Scope, ttl = TTL}) ->
     ExpiryAbsolute = seconds_since_epoch(TTL),
     Context = build_context(Client, ExpiryAbsolute, ResOwner, Scope),
@@ -229,14 +226,15 @@ issue_token(#authorization{client = Client, resowner = ResOwner,
     ok = ?BACKEND:associate_access_token(AccessToken, Context),
     oauth2_response:new(AccessToken, TTL, ResOwner, Scope).
 
+%% @doc Issue an Access Token and a Refresh Token.
+%% The OAuth2 specification forbids or discourages issuing a refresh token
+%% when no resource owner is authenticated (See 4.2.2 and 4.4.3)
 -spec issue_token_and_refresh(Authorization) -> Response when
       Authorization :: #authorization{resowner :: term()},
       Response :: oauth2_response:response().
 issue_token_and_refresh(#authorization{client = Client, resowner = ResOwner,
                                        scope = Scope, ttl = TTL})
-  %% The OAuth2 specification forbids or discourages issuing a refresh token
-  %% when no resource owner is authenticated (See 4.2.2 and 4.4.3)
-  when ResOwner /= undefined ->
+                                       when ResOwner /= undefined ->
     ExpiryAbsolute = seconds_since_epoch(TTL),
     Context = build_context(Client, ExpiryAbsolute, ResOwner, Scope),
     AccessToken = ?TOKEN:generate(Context),
@@ -247,7 +245,6 @@ issue_token_and_refresh(#authorization{client = Client, resowner = ResOwner,
 
 %% @doc Verifies an access code AccessCode, returning its associated
 %% context if successful. Otherwise, an OAuth2 error code is returned.
-%% @end
 -spec verify_access_code(AccessCode) -> {ok, Context} | {error, Reason} when
       AccessCode  :: token(),
       Context     :: context(),
@@ -270,8 +267,8 @@ verify_access_code(AccessCode) ->
 %% @doc Verifies an access code AccessCode and it's corresponding Identity,
 %% returning its associated context if successful. Otherwise, an OAuth2
 %% error code is returned.
-%% @end
--spec verify_access_code(AccessCode, Client) -> {ok, Context} | {error, Reason} when
+-spec verify_access_code(AccessCode, Client) -> {ok, Context}
+                                              | {error, Reason} when
       AccessCode  :: token(),
       Client      :: term(),
       Context     :: context(),
@@ -288,7 +285,6 @@ verify_access_code(AccessCode, Client) ->
 
 %% @doc Verifies an refresh token RefreshToken, returning a new Access Token
 %% if successful. Otherwise, an OAuth2 error code is returned.
-%% @end
 -spec refresh_access_token(ClientId, ClientSecret, RefreshToken)
                                        -> {ok, Client, Response}
                                         | {error, Reason} when
@@ -328,7 +324,6 @@ refresh_access_token(ClientId, ClientSecret, RefreshToken) ->
 
 %% @doc Verifies an access token AccessToken, returning its associated
 %% context if successful. Otherwise, an OAuth2 error code is returned.
-%% @end
 -spec verify_access_token(AccessToken) -> {ok, Context} | {error, Reason} when
       AccessToken :: token(),
       Context     :: context(),
