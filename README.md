@@ -7,7 +7,7 @@ accessing Oauth2 enabled services.
 
 oauth2 is released under the terms of the [MIT](http://en.wikipedia.org/wiki/MIT_License) license
 
-Current stable version: [0.2.0](https://github.com/kivra/oauth2/tree/0.1.0)
+Current stable version: [0.2.0](https://github.com/kivra/oauth2/tree/0.2.0)
 
 Current α alpha version: [0.3.0](https://github.com/kivra/oauth2)
 
