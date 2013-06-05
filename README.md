@@ -15,6 +15,7 @@ copyright 2012-2013 Kivra
 
 ## tl;dr
 Check out the [examples](https://github.com/kivra/oauth2_example).
+
 There's also a webmachine server implementation by Oauth2 contributor
 Ivan Martinez: [oauth2_webmachine](https://github.com/IvanMartinez/oauth2_webmachine).
 
