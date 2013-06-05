@@ -7,14 +7,16 @@ accessing Oauth2 enabled services.
 
 oauth2 is released under the terms of the [MIT](http://en.wikipedia.org/wiki/MIT_License) license
 
-Current stable version: [0.1.0](https://github.com/kivra/oauth2/tree/0.1.0)
+Current stable version: [0.2.0](https://github.com/kivra/oauth2/tree/0.1.0)
 
-Current α alpha version: [0.2.0](https://github.com/kivra/oauth2)
+Current α alpha version: [0.3.0](https://github.com/kivra/oauth2)
 
 copyright 2012-2013 Kivra
 
 ## tl;dr
-Check out the [examples](https://github.com/kivra/oauth2_example)
+Check out the [examples](https://github.com/kivra/oauth2_example).
+There's also a webmachine server implementation by Oauth2 contributor
+Ivan Martinez: [oauth2_webmachine](https://github.com/IvanMartinez/oauth2_webmachine).
 
 ## Concepts
 
