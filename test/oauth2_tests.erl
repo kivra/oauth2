@@ -55,7 +55,7 @@ bad_authorize_password_test_() ->
         fun stop/1,
         fun(_) ->
                 [
-                 ?_assertMatch({ok, _, _},
+                 ?_assertMatch({ok, _},
                                oauth2:authorize_password(
                                  <<"herp">>,
                                  <<"derp">>,
@@ -163,10 +163,11 @@ verify_access_token_test_() ->
      fun(_) ->
              [
               fun() ->
-                      {ok, _, Response} = oauth2:authorize_client_credentials(
+                      {ok, Authorization} = oauth2:authorize_client_credentials(
                                          ?CLIENT_ID,
                                          ?CLIENT_SECRET,
                                          ?CLIENT_SCOPE),
+                      Response = oauth2:issue_token(Authorization),
                       {ok, Token} = oauth2_response:access_token(Response),
                       ?assertMatch({ok, _}, oauth2:verify_access_token(Token))
               end,
@@ -182,31 +183,33 @@ bad_access_code_test_() ->
      fun(_) ->
              [
               fun() ->
-                      {error, unauthorized_client} = oauth2:issue_code_grant(
+                      {error, unauthorized_client} = 
+                          oauth2:authorize_code_request(
                                          ?CLIENT_ID,
                                          <<"http://in.val.id">>,
                                          ?USER_NAME,
                                          ?USER_PASSWORD,
                                          ?CLIENT_SCOPE),
-                      {error, unauthorized_client} = oauth2:issue_code_grant(
+                      {error, unauthorized_client} = 
+                          oauth2:authorize_code_request(
                                          <<"XoaUdYODRCMyLkdaKkqlmhsl9QQJ4b">>,
                                          ?CLIENT_URI,
                                          ?USER_NAME,
                                          ?USER_PASSWORD,
                                          ?CLIENT_SCOPE),
-                      {error, invalid_scope} = oauth2:issue_code_grant(
+                      {error, invalid_scope} = oauth2:authorize_code_request(
                                          ?CLIENT_ID,
                                          ?CLIENT_URI,
                                          ?USER_NAME,
                                          ?USER_PASSWORD,
                                          <<"bad_scope">>),
-                      {error, access_denied} = oauth2:issue_code_grant(
+                      {error, access_denied} = oauth2:authorize_code_request(
                                          ?CLIENT_ID,
                                          ?CLIENT_URI,
                                          <<"herp">>,
                                          <<"herp">>,
                                          ?CLIENT_SCOPE),
-                      {error, access_denied} = oauth2:issue_code_grant(
+                      {error, access_denied} = oauth2:authorize_code_request(
                                          ?CLIENT_ID,
                                          ?CLIENT_URI,
                                          <<"derp">>,
@@ -225,21 +228,23 @@ verify_access_code_test_() ->
      fun(_) ->
              [
               fun() ->
-                      {ok, _, Response} = oauth2:issue_code_grant(
+                      {ok, Authorization} = oauth2:authorize_code_request(
                                          ?CLIENT_ID,
                                          ?CLIENT_URI,
                                          ?USER_NAME,
                                          ?USER_PASSWORD,
                                          ?CLIENT_SCOPE),
+                      Response = oauth2:issue_code(Authorization),
                       {ok, Code} = oauth2_response:access_code(Response),
                       ?assertMatch({ok, {user, 31337}},
                                    oauth2_response:resource_owner(Response)),
                       ?assertMatch({ok, _}, oauth2:verify_access_code(Code)),
-                      {ok, _, Response2} = oauth2:authorize_code_grant(
+                      {ok, Authorization2} = oauth2:authorize_code_grant(
                                          ?CLIENT_ID,
                                          ?CLIENT_SECRET,
                                          Code,
                                          ?CLIENT_URI),
+                      Response2 = oauth2:issue_token_and_refresh(Authorization2),
                       {ok, Token} = oauth2_response:access_token(Response2),
                       ?assertMatch({ok, _}, oauth2:verify_access_token(Token))
               end
@@ -253,18 +258,20 @@ verify_refresh_token_test_() ->
      fun(_) ->
              [
               fun() ->
-                      {ok, _, Response} = oauth2:issue_code_grant(
+                      {ok, Authorization} = oauth2:authorize_code_request(
                                          ?CLIENT_ID,
                                          ?CLIENT_URI,
                                          ?USER_NAME,
                                          ?USER_PASSWORD,
                                          ?CLIENT_SCOPE),
+                      Response = oauth2:issue_code(Authorization),
                       {ok, Code} = oauth2_response:access_code(Response),
-                      {ok, _, Response2} = oauth2:authorize_code_grant(
+                      {ok, Authorization2} = oauth2:authorize_code_grant(
                                          ?CLIENT_ID,
                                          ?CLIENT_SECRET,
                                          Code,
                                          ?CLIENT_URI),
+                      Response2 = oauth2:issue_token_and_refresh(Authorization2),
                       {ok, RefreshToken} = oauth2_response:refresh_token(Response2),
                       {ok, _, _Response3} = oauth2:refresh_access_token(?CLIENT_ID,
                                                                         ?CLIENT_SECRET,
