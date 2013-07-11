@@ -44,10 +44,10 @@
 -type token()    :: binary().
 -type lifetime() :: non_neg_integer().
 -type scope()    :: list(binary()) | binary().
--type error()    :: access_denied | invalid_client | invalid_request
-                  | invalid_scope | unauthorized_client
-                  | unsupported_response_type | server_error
-                  | temporarily_unavailable.
+-type error()    :: access_denied | invalid_client | invalid_grant |
+                    invalid_request | invalid_scope | unauthorized_client |
+                    unsupported_response_type | server_error |
+                    temporarily_unavailable.
 
 -export_type([
               token/0
