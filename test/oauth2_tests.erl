@@ -112,6 +112,10 @@ bad_ttl_test_() ->
        fun () ->
                 meck:new(oauth2_mock_backend),
                 meck:expect(oauth2_mock_backend,
+                            authenticate_client,
+                            fun(_, _) -> {ok, {client, 4711}}
+                            end),
+                meck:expect(oauth2_mock_backend,
                             resolve_access_code,
                             fun(_) -> {ok, [{<<"identity">>, <<"123">>},
                                            {<<"resource_owner">>, <<>>},
@@ -148,11 +152,12 @@ bad_ttl_test_() ->
                  ?_assertMatch({error, access_denied},
                                oauth2:verify_access_token(
                                  <<"TiaUdYODLOMyLkdaKkqlmdhsl9QJ94a">>)),
-                 ?_assertMatch({error, access_denied},
+                 ?_assertMatch({error, invalid_grant},
                                 oauth2:refresh_access_token(
                                  ?CLIENT_ID,
                                  ?CLIENT_SECRET,
-                                 <<"TiaUdYODLOMyLkdaKkqlmdhsl9QJ94a">>))
+                                 <<"TiaUdYODLOMyLkdaKkqlmdhsl9QJ94a">>,
+                                 ?CLIENT_SCOPE))
                 ]
         end}.
 
@@ -251,6 +256,58 @@ verify_access_code_test_() ->
              ]
      end}.
 
+bad_refresh_token_test_() ->
+    {setup,
+     fun start/0,
+     fun stop/1,
+     fun(_) ->
+             [
+              fun() ->
+                      {ok, Authorization} = oauth2:authorize_code_request(
+                                         ?CLIENT_ID,
+                                         ?CLIENT_URI,
+                                         ?USER_NAME,
+                                         ?USER_PASSWORD,
+                                         ?CLIENT_SCOPE),
+                      Response = oauth2:issue_code(Authorization),
+                      {ok, Code} = oauth2_response:access_code(Response),
+                      {ok, Authorization2} = oauth2:authorize_code_grant(
+                                         ?CLIENT_ID,
+                                         ?CLIENT_SECRET,
+                                         Code,
+                                         ?CLIENT_URI),
+                      Response2 = oauth2:issue_token_and_refresh(
+                                    Authorization2),
+                      {ok, RefreshToken} = oauth2_response:refresh_token(
+                                             Response2),
+                      ?assertMatch({error, invalid_client}, 
+                                   oauth2:refresh_access_token(
+                                     <<"foo">>,
+                                     ?CLIENT_SECRET,
+                                     RefreshToken,
+                                     ?CLIENT_SCOPE)),
+                      ?assertMatch({error, invalid_client},
+                                   oauth2:refresh_access_token(
+                                     ?CLIENT_ID,
+                                     <<"foo">>,
+                                     RefreshToken,
+                                     ?CLIENT_SCOPE)),
+                      ?assertMatch({error, invalid_grant},
+                                   oauth2:refresh_access_token(
+                                     ?CLIENT_ID,
+                                     ?CLIENT_SECRET,
+                                     <<"foo">>,
+                                     ?CLIENT_SCOPE)),
+                      ?assertMatch({error, invalid_scope},
+                                   oauth2:refresh_access_token(
+                                     ?CLIENT_ID,
+                                     ?CLIENT_SECRET,
+                                     RefreshToken,
+                                     <<"foo">>))
+              end
+             ]
+     end}.
+
 verify_refresh_token_test_() ->
     {setup,
      fun start/0,
@@ -275,7 +332,8 @@ verify_refresh_token_test_() ->
                       {ok, RefreshToken} = oauth2_response:refresh_token(Response2),
                       {ok, _, _Response3} = oauth2:refresh_access_token(?CLIENT_ID,
                                                                         ?CLIENT_SECRET,
-                                                                        RefreshToken),
+                                                                        RefreshToken,
+                                                                        ?CLIENT_SCOPE),
                       {ok, Token} = oauth2_response:access_token(Response2),
                       ?assertMatch({ok, _}, oauth2:verify_access_token(Token))
               end

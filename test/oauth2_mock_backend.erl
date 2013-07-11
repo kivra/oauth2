@@ -45,6 +45,7 @@
 -export([verify_redirection_uri/2]).
 -export([verify_client_scope/2]).
 -export([verify_resowner_scope/2]).
+-export([verify_scope/2]).
 
 %%% mock_backend-specifics
 -export([start/0]).
@@ -141,6 +142,11 @@ verify_client_scope(_, _) ->
 verify_resowner_scope({user, 31337}, ?USER_SCOPE) ->
     {ok, ?USER_SCOPE};
 verify_resowner_scope(_, _) ->
+    {error, invalid_scope}.
+
+verify_scope(Scope, Scope) ->
+    {ok, Scope};
+verify_scope(_, _) ->
     {error, invalid_scope}.
 
 start() ->

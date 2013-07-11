@@ -37,17 +37,17 @@
 -export([verify_access_token/1]).
 -export([verify_access_code/1]).
 -export([verify_access_code/2]).
--export([refresh_access_token/3]).
+-export([refresh_access_token/4]).
 
 %%% Exported types
 -type context()  :: proplists:proplist(binary(), term()).
 -type token()    :: binary().
 -type lifetime() :: non_neg_integer().
 -type scope()    :: list(binary()) | binary().
--type error()    :: access_denied | invalid_client | invalid_request
-                  | invalid_scope | unauthorized_client
-                  | unsupported_response_type | server_error
-                  | temporarily_unavailable.
+-type error()    :: access_denied | invalid_client | invalid_grant |
+                    invalid_request | invalid_scope | unauthorized_client |
+                    unsupported_response_type | server_error |
+                    temporarily_unavailable.
 
 -export_type([
               token/0
@@ -285,41 +285,55 @@ verify_access_code(AccessCode, Client) ->
 
 %% @doc Verifies an refresh token RefreshToken, returning a new Access Token
 %% if successful. Otherwise, an OAuth2 error code is returned.
--spec refresh_access_token(ClientId, ClientSecret, RefreshToken)
+-spec refresh_access_token(ClientId, ClientSecret, RefreshToken, Scope)
                                        -> {ok, Client, Response}
                                         | {error, Reason} when
       ClientId     :: binary(),
       ClientSecret :: binary(),
       RefreshToken :: token(),
-      Client     :: term(),
+      Scope        :: scope(),
+      Client       :: term(),
       Response     :: oauth2_response:response(),
       Reason       :: error().
-refresh_access_token(ClientId, ClientSecret, RefreshToken) ->
-    case ?BACKEND:resolve_refresh_token(RefreshToken) of
-        {ok, Context} ->
-            {_, ExpiryAbsolute} = lists:keyfind(<<"expiry_time">>, 1, Context),
-            case ExpiryAbsolute > seconds_since_epoch(0) of
-                true ->
-                    {_, Client} = lists:keyfind(<<"client">>, 1, Context),
-                    case ?BACKEND:authenticate_client(ClientId, ClientSecret) of
-                        {ok, Client} ->
-                            {_, ResOwner} = lists:keyfind(<<"resource_owner">>, 1, Context),
-                            {_, Scope} = lists:keyfind(<<"scope">>, 1, Context),
-                            TTL = oauth2_config:expiry_time(password_credentials),
-                            Response = issue_token(
-                                         #authorization{client = Client,
-                                                        resowner = ResOwner,
-                                                        scope = Scope,
-                                                        ttl = TTL}),
-                            {ok, Client, Response};
-                        _ -> {error, access_denied}
+refresh_access_token(ClientId, ClientSecret, RefreshToken, Scope) ->
+    case ?BACKEND:authenticate_client(ClientId, ClientSecret) of
+        {ok, Client} ->
+            case ?BACKEND:resolve_refresh_token(RefreshToken) of
+                {ok, Context} ->
+                    {_, ExpiryAbsolute} = lists:keyfind(<<"expiry_time">>, 1, 
+                                                        Context),
+                    case ExpiryAbsolute > seconds_since_epoch(0) of
+                        true ->
+                            {_, Client} = lists:keyfind(<<"client">>, 1, 
+                                                        Context),
+                            {_, RegisteredScope} = lists:keyfind(<<"scope">>, 1,
+                                                                 Context),
+                            case ?BACKEND:verify_scope(RegisteredScope, 
+                                                       Scope) of
+                                {ok, VerifiedScope} ->
+                                    {_, ResOwner} = lists:keyfind(
+                                                      <<"resource_owner">>, 1, 
+                                                      Context),
+                                    TTL = oauth2_config:expiry_time(
+                                            password_credentials),
+                                    Response = issue_token(
+                                                 #authorization{
+                                                   client = Client,
+                                                   resowner = ResOwner,
+                                                   scope = VerifiedScope,
+                                                   ttl = TTL}),
+                                    {ok, Client, Response};
+                                {error, _Reason} ->
+                                    {error, invalid_scope}
+                            end;
+                        false ->
+                            ?BACKEND:revoke_refresh_token(RefreshToken),
+                            {error, invalid_grant}
                     end;
-                false ->
-                    ?BACKEND:revoke_refresh_token(RefreshToken),
-                    {error, access_denied}
+                _ ->
+                    {error, invalid_grant}
             end;
-        _ ->
-            {error, access_denied}
+        _ -> {error, invalid_client}
     end.
 
 %% @doc Verifies an access token AccessToken, returning its associated
