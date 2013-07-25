@@ -73,7 +73,8 @@
 %%% API functions
 %%%===================================================================
 
-%% @doc Authorizes a client via Resource Owner Password Credentials.
+%% @doc Authorizes a resource owner's credentials. Useful for 
+%% Resource Owner Password Credentials Grant and Implicit Grant.
 -spec authorize_password(Username, Password, Scope, AppContext)
                         -> {ok, Authorization} | {error, Reason} when
       Username      :: binary(),
