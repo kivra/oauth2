@@ -1,4 +1,4 @@
-# OAuth2 (v0.2.0)  [![BuildStatus](https://travis-ci.org/kivra/oauth2.png?branch=master)](https://travis-ci.org/kivra/oauth2)
+# OAuth2 (v0.3.0)  [![BuildStatus](https://travis-ci.org/kivra/oauth2.png?branch=master)](https://travis-ci.org/kivra/oauth2)
 This library is designed to simplify the implementation of the server side
 of OAuth2 (http://tools.ietf.org/html/rfc6749). It provides
 **no** support for developing clients. See
@@ -7,17 +7,21 @@ accessing Oauth2 enabled services.
 
 oauth2 is released under the terms of the [MIT](http://en.wikipedia.org/wiki/MIT_License) license
 
-Current stable version: [0.2.0](https://github.com/kivra/oauth2/tree/0.2.0)
+Current stable version: [0.3.0](https://github.com/kivra/oauth2/tree/0.3.0)
 
-Current α alpha version: [0.3.0](https://github.com/kivra/oauth2)
+Current α alpha version: [0.4.0](https://github.com/kivra/oauth2)
 
 copyright 2012-2013 Kivra
 
 ## tl;dr
+### Examples
 Check out the [examples](https://github.com/kivra/oauth2_example).
 
-There's also a webmachine server implementation by Oauth2 contributor
+### Related projects
+Webmachine server implementation by Oauth2 contributor
 Ivan Martinez: [oauth2_webmachine](https://github.com/IvanMartinez/oauth2_webmachine).
+
+Redis backed Oauth2 [backend](https://github.com/interline/oauth2_redis_backend).
 
 ## Concepts
 
