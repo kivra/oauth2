@@ -29,23 +29,23 @@
 -behavior(oauth2_backend).
 
 %%% Behavior API
--export([authenticate_username_password/2]).
--export([authenticate_client/2]).
--export([get_client_identity/1]).
--export([associate_access_code/2]).
--export([associate_refresh_token/2]).
--export([associate_access_token/2]).
--export([resolve_access_code/1]).
--export([resolve_refresh_token/1]).
--export([resolve_access_token/1]).
--export([revoke_access_code/1]).
--export([revoke_access_token/1]).
--export([revoke_refresh_token/1]).
--export([get_redirection_uri/1]).
--export([verify_redirection_uri/2]).
--export([verify_client_scope/2]).
--export([verify_resowner_scope/2]).
--export([verify_scope/2]).
+-export([authenticate_username_password/3]).
+-export([authenticate_client/3]).
+-export([get_client_identity/2]).
+-export([associate_access_code/3]).
+-export([associate_refresh_token/3]).
+-export([associate_access_token/3]).
+-export([resolve_access_code/2]).
+-export([resolve_refresh_token/2]).
+-export([resolve_access_token/2]).
+-export([revoke_access_code/2]).
+-export([revoke_access_token/2]).
+-export([revoke_refresh_token/2]).
+-export([get_redirection_uri/2]).
+-export([verify_redirection_uri/3]).
+-export([verify_client_scope/3]).
+-export([verify_resowner_scope/3]).
+-export([verify_scope/3]).
 
 %%% mock_backend-specifics
 -export([start/0]).
@@ -68,43 +68,43 @@
 %%% API
 %%%===================================================================
 
-authenticate_username_password(?USER_NAME, ?USER_PASSWORD) ->
+authenticate_username_password(?USER_NAME, ?USER_PASSWORD, _) ->
     {ok, {user, 31337}};
-authenticate_username_password(?USER_NAME, _) ->
+authenticate_username_password(?USER_NAME, _, _) ->
     {error, badpass};
-authenticate_username_password(_, _) ->
+authenticate_username_password(_, _, _) ->
     {error, notfound}.
 
-authenticate_client(?CLIENT_ID, ?CLIENT_SECRET) ->
+authenticate_client(?CLIENT_ID, ?CLIENT_SECRET, _) ->
     {ok, {client, 4711}};
-authenticate_client(?CLIENT_ID, _) ->
+authenticate_client(?CLIENT_ID, _, _) ->
     {error, badsecret};
-authenticate_client(_, _) ->
+authenticate_client(_, _, _) ->
     {error, notfound}.
 
-get_client_identity(?CLIENT_ID) ->
+get_client_identity(?CLIENT_ID, _) ->
     {ok, {client, 4711}};
-get_client_identity(_) ->
+get_client_identity(_, _) ->
     {error, notfound}.
 
-associate_access_code(AccessCode, Context) ->
-    associate_access_token(AccessCode, Context).
+associate_access_code(AccessCode, Context, _AppContext) ->
+    associate_access_token(AccessCode, Context, _AppContext).
 
-associate_refresh_token(RefreshToken, Context) ->
+associate_refresh_token(RefreshToken, Context, _) ->
     ets:insert(?ETS_TABLE, {RefreshToken, Context}),
     ok.
 
-associate_access_token(AccessToken, Context) ->
+associate_access_token(AccessToken, Context, _) ->
     ets:insert(?ETS_TABLE, {AccessToken, Context}),
     ok.
 
-resolve_access_code(AccessCode) ->
-    resolve_access_token(AccessCode).
+resolve_access_code(AccessCode, _AppContext) ->
+    resolve_access_token(AccessCode, _AppContext).
 
-resolve_refresh_token(RefreshToken) ->
-    resolve_access_token(RefreshToken).
+resolve_refresh_token(RefreshToken, _AppContext) ->
+    resolve_access_token(RefreshToken, _AppContext).
 
-resolve_access_token(AccessToken) ->
+resolve_access_token(AccessToken, _) ->
     case ets:lookup(?ETS_TABLE, AccessToken) of
         [] ->
             {error, notfound};
@@ -112,41 +112,41 @@ resolve_access_token(AccessToken) ->
             {ok, Context}
     end.
 
-revoke_access_code(AccessCode) ->
-    revoke_access_token(AccessCode).
+revoke_access_code(AccessCode, _AppContext) ->
+    revoke_access_token(AccessCode, _AppContext).
 
-revoke_access_token(AccessToken) ->
+revoke_access_token(AccessToken, _) ->
     ets:delete(?ETS_TABLE, AccessToken),
     ok.
 
-revoke_refresh_token(_RefreshToken) ->
+revoke_refresh_token(_RefreshToken, _) ->
     ok.
 
-get_redirection_uri(?CLIENT_ID) ->
+get_redirection_uri(?CLIENT_ID, _) ->
     {ok, ?CLIENT_URI};
-get_redirection_uri(_) ->
+get_redirection_uri(_, _) ->
     {error, notfound}.
 
-verify_redirection_uri({client, 4711}, ?CLIENT_URI) ->
+verify_redirection_uri({client, 4711}, ?CLIENT_URI, _) ->
     ok;
-verify_redirection_uri(_, _) ->
+verify_redirection_uri(_, _, _) ->
     {error, mismatch}.
 
-verify_client_scope({client, 4711}, []) ->
+verify_client_scope({client, 4711}, [], _) ->
     {ok, []};
-verify_client_scope({client, 4711}, ?CLIENT_SCOPE) ->
+verify_client_scope({client, 4711}, ?CLIENT_SCOPE, _) ->
     {ok, ?CLIENT_SCOPE};
-verify_client_scope(_, _) ->
+verify_client_scope(_, _, _) ->
     {error, invalid_scope}.
 
-verify_resowner_scope({user, 31337}, ?USER_SCOPE) ->
+verify_resowner_scope({user, 31337}, ?USER_SCOPE, _) ->
     {ok, ?USER_SCOPE};
-verify_resowner_scope(_, _) ->
+verify_resowner_scope(_, _, _) ->
     {error, invalid_scope}.
 
-verify_scope(Scope, Scope) ->
+verify_scope(Scope, Scope, _) ->
     {ok, Scope};
-verify_scope(_, _) ->
+verify_scope(_, _, _) ->
     {error, invalid_scope}.
 
 start() ->
