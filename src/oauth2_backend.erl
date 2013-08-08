@@ -158,3 +158,12 @@
       Scope          :: oauth2:scope(),
       Scope2         :: oauth2:scope(),
       Reason         :: notfound | badscope.
+
+%% @doc Verifies that Scope is a valid scope of the set of scopes defined
+%% by ValidScopes.
+%% @end
+-callback verify_scope(ValidScopes, Scope) -> {ok, Scope2} | {error, Reason} when
+      ValidScopes    :: oauth2:scope(),
+      Scope          :: oauth2:scope(),
+      Scope2         :: oauth2:scope(),
+      Reason         :: notfound | badscope.
