@@ -40,7 +40,7 @@
 -export([refresh_access_token/5]).
 
 %%% Exported types
--type context()  :: proplists:proplist(binary(), term()).
+-type context()  :: proplists:proplist().
 -type token()    :: binary().
 -type lifetime() :: non_neg_integer().
 -type scope()    :: list(binary()) | binary().
@@ -73,7 +73,7 @@
 %%% API functions
 %%%===================================================================
 
-%% @doc Authorizes a resource owner's credentials. Useful for 
+%% @doc Authorizes a resource owner's credentials. Useful for
 %% Resource Owner Password Credentials Grant and Implicit Grant.
 -spec authorize_password(Username, Password, Scope, AppContext)
                         -> {ok, Authorization} | {error, Reason} when
@@ -84,7 +84,7 @@
       Authorization :: #authorization{},
       Reason        :: error().
 authorize_password(Username, Password, Scope, AppContext) ->
-    case ?BACKEND:authenticate_username_password(Username, Password, 
+    case ?BACKEND:authenticate_username_password(Username, Password,
                                                  AppContext) of
         {ok, ResOwner} ->
             case ?BACKEND:verify_resowner_scope(ResOwner, Scope, AppContext) of
@@ -149,14 +149,14 @@ authorize_code_grant(ClientId, ClientSecret, AccessCode, RedirectionUri,
                      AppContext) ->
     case ?BACKEND:authenticate_client(ClientId, ClientSecret, AppContext) of
         {ok, Client} ->
-            case ?BACKEND:verify_redirection_uri(Client, RedirectionUri, 
+            case ?BACKEND:verify_redirection_uri(Client, RedirectionUri,
                                                  AppContext) of
                 ok ->
                     case verify_access_code(AccessCode, Client) of
                         {ok, GrantContext} ->
                             TTL = oauth2_config:expiry_time(
                                     password_credentials),
-                            {_, Scope} = lists:keyfind(<<"scope">>, 1, 
+                            {_, Scope} = lists:keyfind(<<"scope">>, 1,
                                                        GrantContext),
                             {_, ResOwner} = lists:keyfind(<<"resource_owner">>,
                                                           1, GrantContext),
@@ -176,7 +176,7 @@ authorize_code_grant(ClientId, ClientSecret, AccessCode, RedirectionUri,
     end.
 
 %% @doc Issue a Code via Access Code Grant
--spec authorize_code_request(ClientId, RedirectionUri, Username, Password, 
+-spec authorize_code_request(ClientId, RedirectionUri, Username, Password,
                              Scope, AppContext)
                        -> {ok, Authorization} | {error, Reason} when
       ClientId          :: binary(),
@@ -191,10 +191,10 @@ authorize_code_request(ClientId, RedirectionUri, Username, Password, Scope,
                        AppContext) ->
     case ?BACKEND:get_client_identity(ClientId, AppContext) of
         {ok, Client} ->
-            case ?BACKEND:verify_redirection_uri(Client, RedirectionUri, 
+            case ?BACKEND:verify_redirection_uri(Client, RedirectionUri,
                                                  AppContext) of
                 ok ->
-                    case ?BACKEND:verify_client_scope(Client, Scope, 
+                    case ?BACKEND:verify_client_scope(Client, Scope,
                                                       AppContext) of
                         {ok, VerifiedScope} ->
                             case ?BACKEND:authenticate_username_password(
@@ -326,19 +326,19 @@ refresh_access_token(ClientId, ClientSecret, RefreshToken, Scope, AppContext) ->
         {ok, Client} ->
             case ?BACKEND:resolve_refresh_token(RefreshToken, AppContext) of
                 {ok, GrantContext} ->
-                    {_, ExpiryAbsolute} = lists:keyfind(<<"expiry_time">>, 1, 
+                    {_, ExpiryAbsolute} = lists:keyfind(<<"expiry_time">>, 1,
                                                         GrantContext),
                     case ExpiryAbsolute > seconds_since_epoch(0) of
                         true ->
-                            {_, Client} = lists:keyfind(<<"client">>, 1, 
+                            {_, Client} = lists:keyfind(<<"client">>, 1,
                                                         GrantContext),
                             {_, RegisteredScope} = lists:keyfind(<<"scope">>, 1,
                                                                  GrantContext),
-                            case ?BACKEND:verify_scope(RegisteredScope, 
+                            case ?BACKEND:verify_scope(RegisteredScope,
                                                        Scope, AppContext) of
                                 {ok, VerifiedScope} ->
                                     {_, ResOwner} = lists:keyfind(
-                                                      <<"resource_owner">>, 1, 
+                                                      <<"resource_owner">>, 1,
                                                       GrantContext),
                                     TTL = oauth2_config:expiry_time(
                                             password_credentials),
@@ -353,7 +353,7 @@ refresh_access_token(ClientId, ClientSecret, RefreshToken, Scope, AppContext) ->
                                     {error, invalid_scope}
                             end;
                         false ->
-                            ?BACKEND:revoke_refresh_token(RefreshToken, 
+                            ?BACKEND:revoke_refresh_token(RefreshToken,
                                                           AppContext),
                             {error, invalid_grant}
                     end;

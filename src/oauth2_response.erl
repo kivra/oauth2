@@ -190,7 +190,7 @@ resource_owner(Response, NewResOwner) ->
 token_type(#response{}) ->
     {ok, ?TOKEN_TYPE}.
 
--spec to_proplist(response()) -> oauth2:proplist(binary(), binary()).
+-spec to_proplist(response()) -> proplists:proplist().
 to_proplist(Response) ->
     Keys = lists:map(fun to_binary/1, record_info(fields, response)),
     Values = tl(tuple_to_list(Response)), %% Head is 'response'!
