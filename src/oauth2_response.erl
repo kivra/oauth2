@@ -210,5 +210,7 @@ to_binary(Float) when is_float(Float) ->
     to_binary(float_to_list(Float));
 to_binary(Integer) when is_integer(Integer) ->
     to_binary(integer_to_list(Integer));
+to_binary({Key, Value}) ->
+    {to_binary(Key), to_binary(Value)};
 to_binary(Term) ->
     to_binary(term_to_binary(Term)).
