@@ -405,5 +405,5 @@ build_context(Client, ExpiryTime, ResOwner, Scope) ->
 
 -spec seconds_since_epoch(Diff :: integer()) -> non_neg_integer().
 seconds_since_epoch(Diff) ->
-    {Mega, Secs, _Micro} = now(),
+    {Mega, Secs, _Micro} = os:timestamp(),
     Mega * 1000000 + Secs + Diff.
