@@ -68,86 +68,80 @@
 %%% API
 %%%===================================================================
 
-authenticate_username_password(?USER_NAME, ?USER_PASSWORD, _) ->
-    {ok, {user, 31337}};
+authenticate_username_password(?USER_NAME, ?USER_PASSWORD, Ctx) ->
+    {ok, {Ctx, {user, 31337}}};
 authenticate_username_password(?USER_NAME, _, _) ->
     {error, badpass};
 authenticate_username_password(_, _, _) ->
     {error, notfound}.
 
-authenticate_client(?CLIENT_ID, ?CLIENT_SECRET, _) ->
-    {ok, {client, 4711}};
+authenticate_client(?CLIENT_ID, ?CLIENT_SECRET, Ctx) ->
+    {ok, {Ctx, {client, 4711}}};
 authenticate_client(?CLIENT_ID, _, _) ->
     {error, badsecret};
 authenticate_client(_, _, _) ->
     {error, notfound}.
 
-get_client_identity(?CLIENT_ID, _) ->
-    {ok, {client, 4711}};
+get_client_identity(?CLIENT_ID, Ctx) ->
+    {ok, {Ctx, {client, 4711}}};
 get_client_identity(_, _) ->
     {error, notfound}.
 
-associate_access_code(AccessCode, Context, _AppContext) ->
-    associate_access_token(AccessCode, Context, _AppContext).
+associate_access_code(AccessCode, Context, AppContext) ->
+    associate_access_token(AccessCode, Context, AppContext).
 
-associate_refresh_token(RefreshToken, Context, _) ->
+associate_refresh_token(RefreshToken, Context, AppContext) ->
     ets:insert(?ETS_TABLE, {RefreshToken, Context}),
-    ok.
+    {ok, AppContext}.
 
-associate_access_token(AccessToken, Context, _) ->
+associate_access_token(AccessToken, Context, AppContext) ->
     ets:insert(?ETS_TABLE, {AccessToken, Context}),
-    ok.
+    {ok, AppContext}.
 
-resolve_access_code(AccessCode, _AppContext) ->
-    resolve_access_token(AccessCode, _AppContext).
+resolve_access_code(AccessCode, AppContext) ->
+    resolve_access_token(AccessCode, AppContext).
 
-resolve_refresh_token(RefreshToken, _AppContext) ->
-    resolve_access_token(RefreshToken, _AppContext).
+resolve_refresh_token(RefreshToken, AppContext) ->
+    resolve_access_token(RefreshToken, AppContext).
 
-resolve_access_token(AccessToken, _) ->
+resolve_access_token(AccessToken, AppContext) ->
     case ets:lookup(?ETS_TABLE, AccessToken) of
-        [] ->
-            {error, notfound};
-        [{_, Context}] ->
-            {ok, Context}
+        []             -> {error, notfound};
+        [{_, Context}] -> {ok, {AppContext, Context}}
     end.
 
-revoke_access_code(AccessCode, _AppContext) ->
-    revoke_access_token(AccessCode, _AppContext).
+revoke_access_code(AccessCode, AppContext) ->
+    revoke_access_token(AccessCode, AppContext).
 
-revoke_access_token(AccessToken, _) ->
+revoke_access_token(AccessToken, AppContext) ->
     ets:delete(?ETS_TABLE, AccessToken),
-    ok.
+    {ok, AppContext}.
 
-revoke_refresh_token(_RefreshToken, _) ->
-    ok.
+revoke_refresh_token(_RefreshToken, AppContext) ->
+    {ok, AppContext}.
 
-get_redirection_uri(?CLIENT_ID, _) ->
-    {ok, ?CLIENT_URI};
-get_redirection_uri(_, _) ->
-    {error, notfound}.
+get_redirection_uri(?CLIENT_ID, AppContext) -> {ok, {AppContext, ?CLIENT_URI}};
+get_redirection_uri(_, _)                   -> {error, notfound}.
 
-verify_redirection_uri({client, 4711}, ?CLIENT_URI, _) ->
-    ok;
+verify_redirection_uri({client, 4711}, ?CLIENT_URI, AppContext) ->
+    {ok, AppContext};
 verify_redirection_uri(_, _, _) ->
     {error, mismatch}.
 
-verify_client_scope({client, 4711}, [], _) ->
-    {ok, []};
-verify_client_scope({client, 4711}, ?CLIENT_SCOPE, _) ->
-    {ok, ?CLIENT_SCOPE};
+verify_client_scope({client, 4711}, [], AppContext) ->
+    {ok, {AppContext, []}};
+verify_client_scope({client, 4711}, ?CLIENT_SCOPE, AppContext) ->
+    {ok, {AppContext, ?CLIENT_SCOPE}};
 verify_client_scope(_, _, _) ->
     {error, invalid_scope}.
 
-verify_resowner_scope({user, 31337}, ?USER_SCOPE, _) ->
-    {ok, ?USER_SCOPE};
+verify_resowner_scope({user, 31337}, ?USER_SCOPE, AppContext) ->
+    {ok, {AppContext, ?USER_SCOPE}};
 verify_resowner_scope(_, _, _) ->
     {error, invalid_scope}.
 
-verify_scope(Scope, Scope, _) ->
-    {ok, Scope};
-verify_scope(_, _, _) ->
-    {error, invalid_scope}.
+verify_scope(Scope, Scope, AppContext) -> {ok, {AppContext, Scope}};
+verify_scope(_, _, _)                  -> {error, invalid_scope}.
 
 start() ->
     %% Set up the ETS table for holding access tokens.

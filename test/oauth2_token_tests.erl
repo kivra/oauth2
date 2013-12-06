@@ -26,7 +26,6 @@
 
 -module(oauth2_token_tests).
 
--include("oauth2.hrl").
 -include_lib("proper/include/proper.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
@@ -41,7 +40,7 @@ proper_type_spec_test_() ->
 
 generate_test() ->
     Token = oauth2_token:generate([]),
-    ?assertEqual(byte_size(Token), ?TOKEN_LENGTH),
+    ?assertEqual(byte_size(Token), 32),
     ?assert(lists:all(fun is_alphanum/1, binary_to_list(Token))).
 
 generate_low_entropy_test_() ->
@@ -56,9 +55,7 @@ generate_low_entropy_test_() ->
      end,
      fun(_) ->
              [
-              ?_assertEqual(
-                byte_size(oauth2_token:generate([])),
-                 ?TOKEN_LENGTH),
+              ?_assertEqual(byte_size(oauth2_token:generate([])), 32),
               ?_assert(
                  lists:all(fun is_alphanum/1,
                            binary_to_list(oauth2_token:generate([]))))
@@ -71,11 +68,7 @@ generate_low_entropy_test_() ->
 
 %% @doc Returns true for alphanumeric ASCII characters, false for all others.
 -spec is_alphanum(Char :: char()) -> boolean().
-is_alphanum(C) when C >= 16#30 andalso C =< 16#39 ->
-    true;
-is_alphanum(C) when C >= 16#41 andalso C =< 16#5A ->
-    true;
-is_alphanum(C) when C >= 16#61 andalso C =< 16#7A ->
-    true;
-is_alphanum(_) ->
-    false.
+is_alphanum(C) when C >= 16#30 andalso C =< 16#39 -> true;
+is_alphanum(C) when C >= 16#41 andalso C =< 16#5A -> true;
+is_alphanum(C) when C >= 16#61 andalso C =< 16#7A -> true;
+is_alphanum(_)                                    -> false.
