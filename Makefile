@@ -27,7 +27,7 @@ ct: clean deps test-build
 
 build-plt:
 	$(DIALYZER) --build_plt --output_plt .$(PROJECT).plt \
-		--apps kernel stdlib sasl inets crypto public_key ssl
+		--apps erts kernel stdlib sasl inets crypto public_key ssl
 
 dialyze: clean deps test-build
 	$(DIALYZER) --plt .$(PROJECT).plt ebin
