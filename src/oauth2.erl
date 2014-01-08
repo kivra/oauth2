@@ -39,6 +39,7 @@
 -export_type([context/0]).
 -export_type([lifetime/0]).
 -export_type([scope/0]).
+-export_type([appctx/0]).
 -export_type([error/0]).
 
 %%%_* Macros ===========================================================
@@ -59,6 +60,7 @@
 -type response() :: oauth2_response:response().
 -type lifetime() :: non_neg_integer().
 -type scope()    :: list(binary()) | binary().
+-type appctx()   :: term().
 -type error()    :: access_denied | invalid_client | invalid_grant |
                     invalid_request | invalid_scope | unauthorized_client |
                     unsupported_response_type | server_error |
@@ -68,8 +70,8 @@
 %%%_ * API -------------------------------------------------------------
 %% @doc Authorizes a resource owner's credentials. Useful for
 %%      Resource Owner Password Credentials Grant and Implicit Grant.
--spec authorize_password(binary(), binary(), scope(), term())
-                                       -> {ok, auth()} | {error, error()}.
+-spec authorize_password(binary(), binary(), scope(), appctx())
+                            -> {ok, {appctx(), auth()}} | {error, error()}.
 authorize_password(UId, Pwd, Scope, AppCtx1) ->
     case ?BACKEND:authenticate_username_password(UId, Pwd, AppCtx1) of
         {error, _}                -> {error, access_denied};
@@ -90,8 +92,8 @@ authorize_password(UId, Pwd, Scope, AppCtx1) ->
 %%      of a public client identifier and a shared client secret.
 %%      Should only be used for confidential clients; see the OAuth2 draft
 %%      for clarification.
--spec authorize_client_credentials(binary(), binary(), scope(), term())
-                                        -> {ok, auth()} | {error, error()}.
+-spec authorize_client_credentials(binary(), binary(), scope(), appctx())
+                            -> {ok, {appctx(), auth()}} | {error, error()}.
 authorize_client_credentials(CId, CSecret, Scope, AppCtx1) ->
     case ?BACKEND:authenticate_client(CId, CSecret, AppCtx1) of
         {error, _}   -> {error, invalid_client};
@@ -115,8 +117,8 @@ authorize_client_credentials(CId, CSecret, Scope, AppCtx1) ->
 %%
 %%      Then verify the supplied RedirectionUri and Code and if valid issue
 %%      an Access Token and an optional Refresh Token
--spec authorize_code_grant(binary(), binary(), token(), binary(), term())
-                                            -> {ok, auth()} | {error, error()}.
+-spec authorize_code_grant(binary(), binary(), token(), binary(), appctx())
+                            -> {ok, {appctx(), auth()}} | {error, error()}.
 authorize_code_grant(CId, CSecret, Code, RedirUri, AppCtx1) ->
     case ?BACKEND:authenticate_client(CId, CSecret, AppCtx1) of
         {error, _}   -> {error, invalid_client};
@@ -149,7 +151,8 @@ authorize_code_grant(CId, CSecret, Code, RedirUri, AppCtx1) ->
                             , binary()
                             , binary()
                             , scope()
-                            , term()) -> {ok, auth()} | {error, error()}.
+                            , appctx())
+                            -> {ok, {appctx(), auth()}} | {error, error()}.
 authorize_code_request(CId, RedirUri, UId, Pwd, Scope, AppCtx1) ->
     case ?BACKEND:get_client_identity(CId, AppCtx1) of
         {error, _}   -> {error, unauthorized_client};
@@ -178,7 +181,7 @@ authorize_code_request(CId, RedirUri, UId, Pwd, Scope, AppCtx1) ->
             end
     end.
 
--spec issue_code(auth(), term()) -> response().
+-spec issue_code(auth(), appctx()) -> {ok, {appctx(), response()}}.
 issue_code(#authorization{client = Client, resowner = ResOwner,
                            scope = Scope, ttl = TTL}, AppCtx1) ->
     ExpiryAbsolute = seconds_since_epoch(TTL),
@@ -194,7 +197,7 @@ issue_code(#authorization{client = Client, resowner = ResOwner,
                                       , <<>>
                                       , AccessCode )}}.
 
--spec issue_token(auth(), term()) -> response().
+-spec issue_token(auth(), appctx()) -> {ok, {appctx(), response()}}.
 issue_token(#authorization{client = Client, resowner = ResOwner,
                            scope = Scope, ttl = TTL}, AppCtx1) ->
     ExpiryAbsolute = seconds_since_epoch(TTL),
@@ -208,7 +211,8 @@ issue_token(#authorization{client = Client, resowner = ResOwner,
 %% @doc Issue an Access Token and a Refresh Token.
 %%      The OAuth2 specification forbids or discourages issuing a refresh token
 %%      when no resource owner is authenticated (See 4.2.2 and 4.4.3)
--spec issue_token_and_refresh(auth(), term()) -> response().
+-spec issue_token_and_refresh(auth(), appctx())
+                                           -> {ok, {appctx(), response()}}.
 issue_token_and_refresh(#authorization{client = Client, resowner = ResOwner,
                                        scope = Scope, ttl = TTL}, AppCtx1)
                                        when ResOwner /= undefined ->
@@ -227,7 +231,8 @@ issue_token_and_refresh(#authorization{client = Client, resowner = ResOwner,
 
 %% @doc Verifies an access code AccessCode, returning its associated
 %%      context if successful. Otherwise, an OAuth2 error code is returned.
--spec verify_access_code(token(), term()) -> {ok, context()} | {error, error()}.
+-spec verify_access_code(token(), appctx())
+                         -> {ok, {appctx(), context()}} | {error, error()}.
 verify_access_code(AccessCode, AppCtx1) ->
     case ?BACKEND:resolve_access_code(AccessCode, AppCtx1) of
         {ok, {AppCtx2, GrantCtx}} ->
@@ -243,8 +248,8 @@ verify_access_code(AccessCode, AppCtx1) ->
 %% @doc Verifies an access code AccessCode and it's corresponding Identity,
 %%      returning its associated context if successful. Otherwise, an OAuth2
 %%      error code is returned.
--spec verify_access_code(token(), term(), term())
-                                        -> {ok, context()} | {error, error()}.
+-spec verify_access_code(token(), term(), appctx())
+                         -> {ok, {appctx(), context()}} | {error, error()}.
 verify_access_code(AccessCode, Client, AppCtx1) ->
     case verify_access_code(AccessCode, AppCtx1) of
         {ok, {AppCtx2, GrantCtx}} ->
@@ -257,8 +262,8 @@ verify_access_code(AccessCode, Client, AppCtx1) ->
 
 %% @doc Verifies an refresh token RefreshToken, returning a new Access Token
 %%      if successful. Otherwise, an OAuth2 error code is returned.
--spec refresh_access_token(binary(), binary(), token(), scope(), term())
-                            -> {ok, {term(), response()}} | {error, error()}.
+-spec refresh_access_token(binary(), binary(), token(), scope(), appctx())
+                        -> {ok, {appctx(), response()}} | {error, error()}.
 refresh_access_token(CId, CSecret, RefreshToken, Scope, AppCtx1) ->
     case ?BACKEND:authenticate_client(CId, CSecret, AppCtx1) of
         {ok, {AppCtx2, Client}} ->
@@ -298,8 +303,8 @@ refresh_access_token(CId, CSecret, RefreshToken, Scope, AppCtx1) ->
 
 %% @doc Verifies an access token AccessToken, returning its associated
 %%      context if successful. Otherwise, an OAuth2 error code is returned.
--spec verify_access_token(token(), term())
-                                        -> {ok, context()} | {error, error()}.
+-spec verify_access_token(token(), appctx())
+                         -> {ok, {appctx(), context()}} | {error, error()}.
 verify_access_token(AccessToken, AppCtx1) ->
     case ?BACKEND:resolve_access_token(AccessToken, AppCtx1) of
         {ok, {AppCtx2, GrantCtx}} ->

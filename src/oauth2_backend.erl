@@ -22,93 +22,92 @@
 
 %%%_ * Types -----------------------------------------------------------
 -type grantctx() :: oauth2:context().
--type appctx()   :: term().
--type token()    :: binary().
--type scope()    :: list(binary()) | binary().
+-type appctx()   :: oauth2:appctx().
+-type token()    :: oauth2:token().
+-type scope()    :: oauth2:scope().
 
 %%%_* Behaviour ========================================================
 %% @doc Authenticates a combination of username and password.
 %%      Returns the resource owner identity if the credentials are valid.
 -callback authenticate_username_password(binary(), binary(), appctx()) ->
-                                    {ok, term()} | {error, notfound | badpass}.
+                      {ok, {appctx(), term()}} | {error, notfound | badpass}.
 
 %% @doc Authenticates a client's credentials for a given scope.
 -callback authenticate_client(binary(), binary(), appctx()) ->
-                                {ok, term()} | {error, notfound | badsecret}.
+                    {ok, {appctx(), term()}} | {error, notfound | badsecret}.
 
 %% @doc Stores a new access code token(), associating it with Context.
 %%      The context is a proplist carrying information about the identity
 %%      with which the code is associated, when it expires, etc.
 -callback associate_access_code(token(), grantctx(), appctx()) ->
-                                                      ok | {error, notfound}.
+                                          {ok, appctx()} | {error, notfound}.
 
 %% @doc Stores a new access token token(), associating it with Context.
 %%      The context is a proplist carrying information about the identity
 %%      with which the token is associated, when it expires, etc.
 -callback associate_access_token(token(), grantctx(), appctx()) ->
-                                                      ok | {error, notfound}.
+                                          {ok, appctx()} | {error, notfound}.
 
 %% @doc Stores a new refresh token token(), associating it with
 %%      grantctx(). The context is a proplist carrying information about the
 %%      identity with which the token is associated, when it expires, etc.
 -callback associate_refresh_token(token(), grantctx(), appctx()) ->
-                                                      ok | {error, notfound}.
+                                          {ok, appctx()} | {error, notfound}.
 
 %% @doc Looks up an access token token(), returning the corresponding
 %%      context if a match is found.
 -callback resolve_access_token(token(), appctx()) ->
-                                       {ok, grantctx()} | {error, notfound}.
+                            {ok, {appctx(), grantctx()}} | {error, notfound}.
 
 %% @doc Looks up an access code token(), returning the corresponding
 %%      context if a match is found.
 -callback resolve_access_code(token(), appctx()) ->
-                                       {ok, grantctx()} | {error, notfound}.
+                            {ok, {appctx(), grantctx()}} | {error, notfound}.
 
 %% @doc Looks up an refresh token token(), returning the corresponding
 %%      context if a match is found.
 -callback resolve_refresh_token(token(), appctx()) ->
-                                       {ok, grantctx()} | {error, notfound}.
+                            {ok, {appctx(), grantctx()}} | {error, notfound}.
 
 %% @doc Revokes an access token token(), so that it cannot be used again.
 -callback revoke_access_token(token(), appctx()) ->
-                                                    ok | {error, notfound}.
+                                          {ok, appctx()} | {error, notfound}.
 
 %% @doc Revokes an access code token(), so that it cannot be used again.
 -callback revoke_access_code(token(), appctx()) ->
-                                                    ok | {error, notfound}.
+                                          {ok, appctx()} | {error, notfound}.
 
 %% @doc Revokes an refresh token token(), so that it cannot be used again.
 -callback revoke_refresh_token(token(), appctx()) ->
-                                                    ok | {error, notfound}.
+                                          {ok, appctx()} | {error, notfound}.
 
 %% @doc Returns the redirection URI associated with the client ClientId.
 -callback get_redirection_uri(binary(), appctx()) ->
-                                    {error, notfound} | {ok, binary()}.
+                              {error, notfound} | {ok, {appctx(), binary()}}.
 
 %% @doc Returns a client identity for a given id.
 -callback get_client_identity(binary(), appctx()) ->
-                                {ok, term()} | {error, notfound | badsecret}.
+                    {ok, {appctx(), term()}} | {error, notfound | badsecret}.
 
 %% @doc Verifies that RedirectionUri is a valid redirection URI for the
 %%      client identified by Identity.
 -callback verify_redirection_uri(term(), binary(), appctx()) ->
-                                            ok | {error, notfound | baduri}.
+                                 {ok, appctx()} | {error, notfound | baduri}.
 
 %% @doc Verifies that scope() is a valid scope for the client identified
 %%      by Identity.
 -callback verify_client_scope(term(), scope(), appctx()) ->
-                                {ok, scope()} | {error, notfound | badscope}.
+                    {ok, {appctx(), scope()}} | {error, notfound | badscope}.
 
 %% @doc Verifies that scope() is a valid scope for the resource
 %%      owner identified by Identity.
 -callback verify_resowner_scope(term(), scope(), appctx()) ->
-                                {ok, scope()} | {error, notfound | badscope}.
+                    {ok, {appctx(), scope()}} | {error, notfound | badscope}.
 
 %% @doc Verifies that scope() is a valid scope of the set of scopes defined
-%% by Validscope()s.
-%% @end
+%%      by Validscope()s.
 -callback verify_scope(scope(), scope(), appctx()) ->
-                                {ok, scope()} | {error, notfound | badscope}.
+                    {ok, {appctx(), scope()}} | {error, notfound | badscope}.
 
 %%%_* Tests ============================================================
 -ifdef(TEST).
