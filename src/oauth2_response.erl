@@ -153,11 +153,22 @@ token_type(#response{}) ->
 
 -spec to_proplist(response()) -> proplists:proplist().
 to_proplist(Response) ->
-    Keys = lists:map(fun to_binary/1, record_info(fields, response)),
+    Keys = record_info(fields, response),
     Values = tl(tuple_to_list(Response)), %% Head is 'response'!
-    [{K, to_binary(V)} || {K , V} <- lists:zip(Keys, Values), V =/= undefined].
+    to_proplist(Keys, Values).
 
 %%%_* Private functions ================================================
+to_proplist([], []) ->
+    [];
+to_proplist([_ | Ks], [undefined | Vs]) ->
+    to_proplist(Ks, Vs);
+to_proplist([expires_in | Ks], [V | Vs]) ->
+    [{<<"expires_in">>, V} | to_proplist(Ks, Vs)];
+to_proplist([K | Ks], [V | Vs]) ->
+    Key = atom_to_binary(K, latin1),
+    Value = to_binary(V),
+    [{Key, Value} | to_proplist(Ks, Vs)].
+
 to_binary(Binary) when is_binary(Binary) ->
     Binary;
 to_binary(List) when is_list(List) ->

@@ -322,7 +322,7 @@ verify_access_token(AccessToken, AppCtx1) ->
 build_context(Client, ExpiryTime, ResOwner, Scope) ->
     [ {<<"client">>,         Client}
     , {<<"resource_owner">>, ResOwner}
-    , {<<"expiry_time">>,    list_to_binary(integer_to_list(ExpiryTime))}
+    , {<<"expiry_time">>,    ExpiryTime}
     , {<<"scope">>,          Scope} ].
 
 -spec seconds_since_epoch(integer()) -> non_neg_integer().

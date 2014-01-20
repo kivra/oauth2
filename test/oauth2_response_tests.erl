@@ -164,7 +164,7 @@ token_type_test() ->
 to_proplist_test() ->
     Response = oauth2_response:new(?ACCESS, ?EXPIRY, ?RESOURCE_OWNER, ?SCOPE, ?REFRESH),
     ?assertEqual([{<<"access_token">>, ?ACCESS},
-                  {<<"expires_in">>, list_to_binary(integer_to_list(?EXPIRY))},
+                  {<<"expires_in">>, ?EXPIRY},
                   {<<"resource_owner">>, ?RESOURCE_OWNER},
                   {<<"scope">>, ?SCOPE},
                   {<<"refresh_token">>, ?REFRESH},
