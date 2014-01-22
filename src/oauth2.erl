@@ -37,6 +37,7 @@
 
 -export_type([token/0]).
 -export_type([context/0]).
+-export_type([auth/0]).
 -export_type([lifetime/0]).
 -export_type([scope/0]).
 -export_type([appctx/0]).

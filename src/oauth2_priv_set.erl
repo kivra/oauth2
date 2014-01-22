@@ -27,6 +27,8 @@
 -export([is_subset/2]).
 -export([is_member/2]).
 
+-export_type([priv_set/0]).
+
 %%%_ * Types -----------------------------------------------------------
 %% Invariant: Children are sorted increasingly by name.
 -type priv_tree() :: {node, Name :: binary(), Children :: [priv_tree()]} | '*'.
