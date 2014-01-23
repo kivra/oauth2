@@ -24,6 +24,7 @@
 %%%_* Exports ==========================================================
 %%%_ * API -------------------------------------------------------------
 -export([authorize_password/4]).
+-export([authorize_resource_owner/3]).
 -export([authorize_client_credentials/4]).
 -export([authorize_code_grant/5]).
 -export([authorize_code_request/6]).
@@ -76,16 +77,23 @@ authorize_password(UId, Pwd, Scope, AppCtx1) ->
     case ?BACKEND:authenticate_username_password(UId, Pwd, AppCtx1) of
         {error, _}                -> {error, access_denied};
         {ok, {AppCtx2, ResOwner}} ->
-            case ?BACKEND:verify_resowner_scope(ResOwner, Scope, AppCtx2) of
-                {error, _}              -> {error, invalid_scope};
-                {ok, {AppCtx3, Scope2}} ->
-                    {ok, { AppCtx3
-                         , #authorization{
-                               resowner = ResOwner
-                             , scope    = Scope2
-                             , ttl      = oauth2_config:expiry_time(
-                                              password_credentials) } }}
-            end
+            authorize_resource_owner(ResOwner, Scope, AppCtx2)
+    end.
+
+%% @doc Authorizes a previously authenticated resource owner.  Useful
+%%      for Resource Owner Password Credentials Grant and Implicit Grant.
+-spec authorize_resource_owner(term(), scope(), appctx())
+                            -> {ok, {appctx(), auth()}} | {error, error()}.
+authorize_resource_owner(ResOwner, Scope, AppCtx1) ->
+    case ?BACKEND:verify_resowner_scope(ResOwner, Scope, AppCtx1) of
+        {error, _}              -> {error, invalid_scope};
+        {ok, {AppCtx2, Scope2}} ->
+            {ok, { AppCtx2
+                 , #authorization{
+                       resowner = ResOwner
+                     , scope    = Scope2
+                     , ttl      = oauth2_config:expiry_time(
+                                      password_credentials) } }}
     end.
 
 %% @doc Authorize client via its own credentials, i.e., a combination
