@@ -76,6 +76,25 @@ bad_authorize_password_test_() ->
                 ]
         end}.
 
+authorize_resource_owner_test_() ->
+    {setup,
+        fun start/0,
+        fun stop/1,
+        fun(_) ->
+                [
+                 ?_assertMatch({ok, _},
+                               oauth2:authorize_resource_owner(
+                                 {user, 31337},
+                                 [<<"xyz">>],
+                                 foo_context)),
+                 ?_assertMatch({error, invalid_scope},
+                               oauth2:authorize_resource_owner(
+                                 {user, 31337},
+                                 <<"bad_scope">>,
+                                 foo_context))
+                ]
+        end}.
+
 bad_authorize_client_credentials_test_() ->
     {setup,
         fun start/0,
