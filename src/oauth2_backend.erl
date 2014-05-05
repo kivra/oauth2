@@ -25,6 +25,7 @@
 -type appctx()   :: oauth2:appctx().
 -type token()    :: oauth2:token().
 -type scope()    :: oauth2:scope().
+-type client()   :: term().
 
 %%%_* Behaviour ========================================================
 %% @doc Authenticates a combination of username and password.
@@ -34,7 +35,7 @@
 
 %% @doc Authenticates a client's credentials for a given scope.
 -callback authenticate_client(binary(), binary(), appctx()) ->
-                    {ok, {appctx(), term()}} | {error, notfound | badsecret}.
+                    {ok, {appctx(), client()}} | {error, notfound | badsecret}.
 
 %% @doc Stores a new access code token(), associating it with Context.
 %%      The context is a proplist carrying information about the identity
@@ -87,22 +88,22 @@
 
 %% @doc Returns a client identity for a given id.
 -callback get_client_identity(binary(), appctx()) ->
-                    {ok, {appctx(), term()}} | {error, notfound | badsecret}.
+                    {ok, {appctx(), client()}} | {error, notfound | badsecret}.
 
 %% @doc Verifies that RedirectionUri is a valid redirection URI for the
 %%      client identified by Identity.
--callback verify_redirection_uri(term(), binary(), appctx()) ->
+-callback verify_redirection_uri(client(), binary(), appctx()) ->
                                  {ok, appctx()} | {error, notfound | baduri}.
 
 %% @doc Verifies that scope() is a valid scope for the client identified
 %%      by Identity.
--callback verify_client_scope(term(), scope(), appctx()) ->
+-callback verify_client_scope(client(), scope(), appctx()) ->
                     {ok, {appctx(), scope()}} | {error, notfound | badscope}.
 
 %% @doc Verifies that scope() is a valid scope for the resource
 %%      owner identified by Identity.
 -callback verify_resowner_scope(term(), scope(), appctx()) ->
-                    {ok, {appctx(), scope()}} | {error, notfound | badscope}.
+                    {ok, {appctx(), client(), scope()}} | {error, notfound | badscope}.
 
 %% @doc Verifies that scope() is a valid scope of the set of scopes defined
 %%      by Validscope()s.
