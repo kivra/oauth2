@@ -24,6 +24,7 @@
 %%%_* Exports ==========================================================
 %%%_ * API -------------------------------------------------------------
 -export([authorize_password/4]).
+-export([authorize_password/6]).
 -export([authorize_resource_owner/3]).
 -export([authorize_client_credentials/4]).
 -export([authorize_code_grant/5]).
@@ -81,6 +82,19 @@ authorize_password(UId, Pwd, Scope, AppCtx1) ->
             authorize_resource_owner(ResOwner, Scope, AppCtx2)
     end.
 
+%% @doc Authorize client via its own credentials and afterwards the resource
+%%      owner's credentials. Useful for Resource Owner Password Credentials
+%%      Grant and Implicit Grant with previous client authentication.
+-spec authorize_password(binary(), binary(), binary(), binary(), scope(),
+                         appctx())
+                            -> {ok, {appctx(), auth()}} | {error, error()}.
+authorize_password(CId, CSecret, UId, Pwd, Scope, AppCtx1) ->
+    case ?BACKEND:authenticate_client(CId, CSecret, AppCtx1) of
+        {error, _}               -> {error, invalid_client};
+        {ok, {AppCtx2, _Client}} ->
+            authorize_password(UId, Pwd, Scope, AppCtx2)
+    end.
+
 %% @doc Authorizes a previously authenticated resource owner.  Useful
 %%      for Resource Owner Password Credentials Grant and Implicit Grant.
 -spec authorize_resource_owner(term(), scope(), appctx())
@@ -88,10 +102,11 @@ authorize_password(UId, Pwd, Scope, AppCtx1) ->
 authorize_resource_owner(ResOwner, Scope, AppCtx1) ->
     case ?BACKEND:verify_resowner_scope(ResOwner, Scope, AppCtx1) of
         {error, _}              -> {error, invalid_scope};
-        {ok, {AppCtx2, Scope2}} ->
+        {ok, {AppCtx2, Client, Scope2}} ->
             {ok, { AppCtx2
                  , #authorization{
-                       resowner = ResOwner
+                       client   = Client
+                     , resowner = ResOwner
                      , scope    = Scope2
                      , ttl      = oauth2_config:expiry_time(
                                       password_credentials) } }}
@@ -175,7 +190,7 @@ authorize_code_request(CId, RedirUri, UId, Pwd, Scope, AppCtx1) ->
                             case ?BACKEND:verify_resowner_scope(
                                     ResOwner, Scope, AppCtx4) of
                                 {error, _}              -> {error, invalid_scope};
-                                {ok, {AppCtx5, Scope2}} ->
+                                {ok, {AppCtx5, Client, Scope2}} ->
                                     TTL = oauth2_config:expiry_time(code_grant),
                                     {ok, { AppCtx5
                                          , #authorization{ client   = Client
