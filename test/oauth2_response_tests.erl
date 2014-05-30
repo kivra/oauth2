@@ -177,6 +177,18 @@ to_proplist_test() ->
     end),
     ?assert(proper:quickcheck(Property, [{to_file, user}])).
 
+-ifndef(pre17).
+to_map_test() ->
+    Response = oauth2_response:new(?ACCESS, ?EXPIRY, ?RESOURCE_OWNER, ?SCOPE, ?REFRESH),
+    ?assertEqual(#{<<"access_token">> => ?ACCESS,
+                   <<"expires_in">> => ?EXPIRY,
+                   <<"resource_owner">> => ?RESOURCE_OWNER,
+                   <<"scope">> => ?SCOPE,
+                   <<"refresh_token">> => ?REFRESH,
+                   <<"token_type">> => <<"bearer">>
+                },oauth2_response:to_map(Response)).
+-endif.
+
 %%%===================================================================
 %%% Helpers
 %%%===================================================================
