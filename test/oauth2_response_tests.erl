@@ -162,11 +162,30 @@ token_type_test() ->
                  oauth2_response:token_type(oauth2_response:new(?ACCESS))).
 
 to_proplist_test() ->
-    Response = oauth2_response:new(?ACCESS, ?EXPIRY, ?RESOURCE_OWNER, ?SCOPE, ?REFRESH),
-    ?assertEqual([{<<"access_token">>, ?ACCESS},
-                  {<<"expires_in">>, ?EXPIRY},
-                  {<<"resource_owner">>, ?RESOURCE_OWNER},
-                  {<<"scope">>, ?SCOPE},
-                  {<<"refresh_token">>, ?REFRESH},
-                  {<<"token_type">>, <<"bearer">>}],
-                 oauth2_response:to_proplist(Response)).
+    Property = ?FORALL({AccessToken, RefreshToken, Expiry, ResourceOwner, Scope},
+                       {non_empty(oauth2:token()), non_empty(oauth2:token()), oauth2:lifetime(), binary(), oauth2:scope()},
+    begin
+        Response = oauth2_response:new(AccessToken, Expiry, ResourceOwner, Scope, RefreshToken),
+        [
+         {<<"access_token">>, AccessToken},
+         {<<"expires_in">>, Expiry},
+         {<<"resource_owner">>, ResourceOwner},
+         {<<"scope">>, scope_to_binary(Scope)},
+         {<<"refresh_token">>, RefreshToken},
+         {<<"token_type">>, <<"bearer">>}
+        ] =:= oauth2_response:to_proplist(Response)
+    end),
+    ?assert(proper:quickcheck(Property, [{to_file, user}])).
+
+%%%===================================================================
+%%% Helpers
+%%%===================================================================
+
+scope_to_binary(Binary) when is_binary(Binary) ->
+    Binary;
+scope_to_binary([]) ->
+    <<>>;
+scope_to_binary([Binary]) when is_binary(Binary) ->
+    Binary;
+scope_to_binary([BinaryHead | Tail]) when is_binary(BinaryHead) ->
+    <<BinaryHead/binary, <<" ">>/binary, (scope_to_binary(Tail))/binary >>.

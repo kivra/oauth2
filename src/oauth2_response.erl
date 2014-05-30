@@ -171,6 +171,10 @@ to_proplist([K | Ks], [V | Vs]) ->
 
 to_binary(Binary) when is_binary(Binary) ->
     Binary;
+to_binary([Binary]) when is_binary(Binary) ->
+    Binary;
+to_binary([BinaryHead | Tail]) when is_binary(BinaryHead) ->
+    <<BinaryHead/binary, <<" ">>/binary, (to_binary(Tail))/binary >>;
 to_binary(List) when is_list(List) ->
     to_binary(list_to_binary(List));
 to_binary(Atom) when is_atom(Atom) ->
