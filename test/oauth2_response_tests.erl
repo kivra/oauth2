@@ -188,4 +188,4 @@ scope_to_binary([]) ->
 scope_to_binary([Binary]) when is_binary(Binary) ->
     Binary;
 scope_to_binary([BinaryHead | Tail]) when is_binary(BinaryHead) ->
-    <<BinaryHead/binary, <<" ">>/binary, (scope_to_binary(Tail))/binary >>.
+    <<BinaryHead/binary, " ", (scope_to_binary(Tail))/binary>>.
