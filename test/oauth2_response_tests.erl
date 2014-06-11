@@ -179,14 +179,20 @@ to_proplist_test() ->
 
 -ifndef(pre17).
 to_map_test() ->
-    Response = oauth2_response:new(?ACCESS, ?EXPIRY, ?RESOURCE_OWNER, ?SCOPE, ?REFRESH),
-    ?assertEqual(#{<<"access_token">> => ?ACCESS,
-                   <<"expires_in">> => ?EXPIRY,
-                   <<"resource_owner">> => ?RESOURCE_OWNER,
-                   <<"scope">> => ?SCOPE,
-                   <<"refresh_token">> => ?REFRESH,
-                   <<"token_type">> => <<"bearer">>
-                },oauth2_response:to_map(Response)).
+    Property = ?FORALL({AccessToken, RefreshToken, Expiry, ResourceOwner, Scope},
+                       {non_empty(oauth2:token()), non_empty(oauth2:token()), oauth2:lifetime(), binary(), oauth2:scope()},
+    begin
+        Response = oauth2_response:new(AccessToken, Expiry, ResourceOwner, Scope, RefreshToken),
+        #{
+          <<"access_token">> => AccessToken,
+          <<"expires_in">> => Expiry,
+          <<"resource_owner">> => ResourceOwner,
+          <<"scope">> => scope_to_binary(Scope),
+          <<"refresh_token">> => RefreshToken,
+          <<"token_type">> => <<"bearer">>
+        } =:= oauth2_response:to_map(Response)
+    end),
+    ?assert(proper:quickcheck(Property, [{to_file, user}])).
 -endif.
 
 %%%===================================================================
