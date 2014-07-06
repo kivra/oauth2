@@ -1,4 +1,4 @@
-# OAuth2 (v0.3.0)  [![BuildStatus](https://travis-ci.org/kivra/oauth2.png?branch=master)](https://travis-ci.org/kivra/oauth2)
+# OAuth2 (v0.5.0)  [![BuildStatus](https://travis-ci.org/kivra/oauth2.png?branch=master)](https://travis-ci.org/kivra/oauth2)
 This library is designed to simplify the implementation of the server side
 of OAuth2 (http://tools.ietf.org/html/rfc6749). It provides
 **no** support for developing clients. See
@@ -7,11 +7,11 @@ accessing Oauth2 enabled services.
 
 oauth2 is released under the terms of the [MIT](http://en.wikipedia.org/wiki/MIT_License) license
 
-Current stable version: [0.3.0](https://github.com/kivra/oauth2/tree/0.3.0)
+Current stable version: [0.5.0](https://github.com/kivra/oauth2/tree/0.5.0)
 
-Current α alpha version: [0.4.0](https://github.com/kivra/oauth2)
+Current α alpha version: [0.5.x](https://github.com/kivra/oauth2)
 
-copyright 2012-2013 Kivra
+copyright 2012-2014 Kivra
 
 ## tl;dr
 ### Examples
@@ -150,4 +150,3 @@ generate/0.
 ## License
 The KIVRA oauth2 library uses an [MIT license](http://en.wikipedia.org/wiki/MIT_License). So go ahead and do what
 you want!
-
