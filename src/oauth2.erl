@@ -64,9 +64,9 @@
 -type scope()    :: list(binary()) | binary().
 -type appctx()   :: term().
 -type error()    :: access_denied | invalid_client | invalid_grant |
-                    invalid_request | invalid_scope | unauthorized_client |
-                    unsupported_response_type | server_error |
-                    temporarily_unavailable.
+                    invalid_request | invalid_authorization | invalid_scope | 
+                    unauthorized_client | unsupported_response_type | 
+                    server_error | temporarily_unavailable.
 
 %%%_* Code =============================================================
 %%%_ * API -------------------------------------------------------------
@@ -267,7 +267,12 @@ issue_token(#authorization{client = Client, resowner = ResOwner,
 %%        Access Token Response, with the result of authorize_password/6 when 
 %%        the client is confidential and a refresh token must be issued.
 -spec issue_token_and_refresh(auth(), appctx())
-                                           -> {ok, {appctx(), response()}}.
+                                           -> {ok, {appctx(), response()}} |
+                                                {error, invalid_authorization}.
+issue_token_and_refresh(#authorization{client = undefined}, _AppCtx1) ->
+  {error, invalid_authorization};
+issue_token_and_refresh(#authorization{resowner = undefined}, _AppCtx1) ->
+  {error, invalid_authorization};
 issue_token_and_refresh(#authorization{client = Client, resowner = ResOwner,
                                        scope = Scope, ttl = TTL}, AppCtx1)
                                        when ResOwner /= undefined ->
