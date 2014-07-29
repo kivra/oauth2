@@ -320,8 +320,10 @@ verify_access_code(AccessCode, Client, AppCtx1) ->
         Error -> Error
     end.
 
-%% @doc Verifies an refresh token RefreshToken, returning a new Access Token
-%%      if successful. Otherwise, an OAuth2 error code is returned.
+%% @doc Validates a request for an access token from a refresh token, issuing
+%%      a new access token if valid. Use it to implement the following steps of
+%%      RFC 6749:
+%%      - 6. Refreshing an Access Token.
 -spec refresh_access_token(binary(), binary(), token(), scope(), appctx())
                         -> {ok, {appctx(), response()}} | {error, error()}.
 refresh_access_token(CId, CSecret, RefreshToken, Scope, AppCtx1) ->
