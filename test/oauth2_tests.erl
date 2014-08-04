@@ -423,13 +423,6 @@ verify_refresh_token_test_() ->
                   end, [
                         fun(Context) ->
                             oauth2:authorize_password(
-                                ?USER_NAME,
-                                ?USER_PASSWORD,
-                                ?USER_SCOPE,
-                                Context)
-                        end,
-                        fun(Context) ->
-                            oauth2:authorize_password(
                                 ?CLIENT_ID,
                                 ?CLIENT_SECRET,
                                 ?USER_NAME,
