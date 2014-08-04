@@ -136,7 +136,7 @@ verify_client_scope(_, _, _) ->
     {error, invalid_scope}.
 
 verify_resowner_scope({user, 31337}, ?USER_SCOPE, AppContext) ->
-    {ok, {AppContext, {client, 4711}, ?USER_SCOPE}};
+    {ok, {AppContext, ?USER_SCOPE}};
 verify_resowner_scope(_, _, _) ->
     {error, invalid_scope}.
 
