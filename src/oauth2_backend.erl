@@ -103,7 +103,7 @@
 %% @doc Verifies that scope() is a valid scope for the resource
 %%      owner identified by Identity.
 -callback verify_resowner_scope(term(), scope(), appctx()) ->
-                    {ok, {appctx(), client(), scope()}} | {error, notfound | badscope}.
+                    {ok, {appctx(), scope()}} | {error, notfound | badscope}.
 
 %% @doc Verifies that scope() is a valid scope of the set of scopes defined
 %%      by Validscope()s.
