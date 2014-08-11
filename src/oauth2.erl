@@ -65,26 +65,41 @@
 -type scope()    :: list(binary()) | binary().
 -type appctx()   :: term().
 -type error()    :: access_denied | invalid_client | invalid_grant |
-                    invalid_request | invalid_authorization | invalid_scope | 
-                    unauthorized_client | unsupported_response_type | 
+                    invalid_request | invalid_authorization | invalid_scope |
+                    unauthorized_client | unsupported_response_type |
                     server_error | temporarily_unavailable.
 
 %%%_* Code =============================================================
 %%%_ * API -------------------------------------------------------------
-%% @doc Authorizes a resource owner's credentials. Useful for
-%%      Resource Owner Password Credentials Grant and Implicit Grant.
+
+%% @doc Validates a request fon an access token from resource owner's
+%%      credentials. Use it to implement the following steps of RFC 6749:
+%%      - 4.2.1. Implicit Grant > Authorization Request.
+%%      - 4.3.2. Resource Owner Password Credentials Grant >
+%%        Access Token Request, when the client is public.
 -spec authorize_password(binary(), binary(), scope(), appctx())
                             -> {ok, {appctx(), auth()}} | {error, error()}.
 authorize_password(UId, Pwd, Scope, AppCtx1) ->
     case ?BACKEND:authenticate_username_password(UId, Pwd, AppCtx1) of
         {error, _}                -> {error, access_denied};
         {ok, {AppCtx2, ResOwner}} ->
-            authorize_resource_owner(ResOwner, Scope, AppCtx2)
+            case ?BACKEND:verify_resowner_scope(ResOwner, Scope, AppCtx1) of
+                {error, _}              -> {error, invalid_scope};
+                {ok, {AppCtx2, Scope2}} ->
+                    {ok, { AppCtx2
+                         , #authorization{
+                               resowner = ResOwner
+                             , scope    = Scope2
+                             , ttl      = oauth2_config:expiry_time(
+                                                password_credentials) } }}
+            end
     end.
 
-%% @doc Authorize client via its own credentials and afterwards the resource
-%%      owner's credentials. Useful for Resource Owner Password Credentials
-%%      Grant and Implicit Grant with previous client authentication.
+%% @doc Validates a request fon an access token from client and resource
+%%      owner's credentials. Use it to implement the following steps of
+%%      RFC 6749:
+%%      - 4.3.2. Resource Owner Password Credentials Grant >
+%%        Access Token Request, when the client is confidential.
 -spec authorize_password(binary(), binary(), binary(), binary(), scope(),
                          appctx())
                             -> {ok, {appctx(), auth()}} | {error, error()}.
@@ -95,7 +110,7 @@ authorize_password(CId, CSecret, UId, Pwd, Scope, AppCtx1) ->
             case ?BACKEND:authenticate_username_password(UId, Pwd, AppCtx2) of
                 {error, _}                -> {error, access_denied};
                 {ok, {AppCtx3, ResOwner}} ->
-                    case ?BACKEND:verify_resowner_scope(ResOwner, Scope, 
+                    case ?BACKEND:verify_resowner_scope(ResOwner, Scope,
                                                         AppCtx3) of
                         {error, _}              -> {error, invalid_scope};
                         {ok, {AppCtx4, Scope2}} ->
@@ -127,10 +142,9 @@ authorize_resource_owner(ResOwner, Scope, AppCtx1) ->
                                       password_credentials) } }}
     end.
 
-%% @doc Authorize client via its own credentials, i.e., a combination
-%%      of a public client identifier and a shared client secret.
-%%      Should only be used for confidential clients; see the OAuth2 draft
-%%      for clarification.
+%% @doc Validates a request fon an access token from client's credentials.
+%%      Use it to implement the following steps of RFC 6749:
+%%      - 4.4.2. Client Credentials Grant > Access Token Request.
 -spec authorize_client_credentials(binary(), binary(), scope(), appctx())
                             -> {ok, {appctx(), auth()}} | {error, error()}.
 authorize_client_credentials(CId, CSecret, Scope, AppCtx1) ->
@@ -149,13 +163,9 @@ authorize_client_credentials(CId, CSecret, Scope, AppCtx1) ->
             end
     end.
 
-%% @doc Authorize client via its own credentials, i.e., a combination
-%%      of a public client identifier and a shared client secret.
-%%      Should only be used for confidential clients; see the OAuth2 draft
-%%      for clarification.
-%%
-%%      Then verify the supplied RedirectionUri and Code and if valid issue
-%%      an Access Token and an optional Refresh Token
+%% @doc Validates a request for an access token from an authorization code.
+%%      Use it to implement the following steps of RFC 6749:
+%%      - 4.1.3. Authorization Code Grant > Access Token Request.
 -spec authorize_code_grant(binary(), binary(), token(), binary(), appctx())
                             -> {ok, {appctx(), auth()}} | {error, error()}.
 authorize_code_grant(CId, CSecret, Code, RedirUri, AppCtx1) ->
@@ -184,7 +194,10 @@ authorize_code_grant(CId, CSecret, Code, RedirUri, AppCtx1) ->
             end
     end.
 
-%% @doc Issue a Code via Access Code Grant
+%% @doc Validates a request fon an authorization code from client and resource
+%%      owner's credentials. Use it to implement the following steps of
+%%      RFC 6749:
+%%      - 4.1.1. Authorization Code Grant > Authorization Request.
 -spec authorize_code_request( binary()
                             , binary()
                             , binary()
@@ -220,6 +233,10 @@ authorize_code_request(CId, RedirUri, UId, Pwd, Scope, AppCtx1) ->
             end
     end.
 
+%% @doc Issues an authorization code from an authorization. Use it to implement
+%%      the following steps of RFC 6749:
+%%      - 4.1.2. Authorization Code Grant > Authorization Response, with the
+%%        result of authorize_code_request/6.
 -spec issue_code(auth(), appctx()) -> {ok, {appctx(), response()}}.
 issue_code(#authorization{client = Client, resowner = ResOwner,
                            scope = Scope, ttl = TTL}, AppCtx1) ->
@@ -236,6 +253,18 @@ issue_code(#authorization{client = Client, resowner = ResOwner,
                                       , <<>>
                                       , AccessCode )}}.
 
+%% @doc Issues an access token without refresh token from an authorization.
+%%      Use it to implement the following steps of RFC 6749:
+%%      - 4.1.4. Authorization Code Grant > Authorization Response, with the
+%%        result of authorize_code_grant/5 when no refresh token must be issued.
+%%      - 4.2.2. Implicit Grant > Access Token Response, with the result of
+%%        authorize_password/4.
+%%      - 4.3.3. Resource Owner Password Credentials Grant >
+%%        Access Token Response, with the result of authorize_password/4 or
+%%        authorize_password/6 when the client is public or no refresh token
+%%        must be issued.
+%%      - 4.4.3. Client Credentials Grant > Access Token Response, with the
+%%        result of authorize_client_credentials/4.
 -spec issue_token(auth(), appctx()) -> {ok, {appctx(), response()}}.
 issue_token(#authorization{client = Client, resowner = ResOwner,
                            scope = Scope, ttl = TTL}, AppCtx1) ->
@@ -247,9 +276,13 @@ issue_token(#authorization{client = Client, resowner = ResOwner,
                                                     , AppCtx1 ),
     {ok, {AppCtx2, oauth2_response:new(AccessToken, TTL, ResOwner, Scope)}}.
 
-%% @doc Issue an Access Token and a Refresh Token.
-%%      The OAuth2 specification forbids or discourages issuing a refresh token
-%%      when no resource owner is authenticated (See 4.2.2 and 4.4.3)
+%% @doc Issues access and refresh tokens from an authorization.
+%%      Use it to implement the following steps of RFC 6749:
+%%      - 4.1.4. Authorization Code Grant > Access Token Response, with the
+%%        result of authorize_code_grant/5 when a refresh token must be issued.
+%%      - 4.3.3. Resource Owner Password Credentials Grant >
+%%        Access Token Response, with the result of authorize_password/6 when
+%%        the client is confidential and a refresh token must be issued.
 -spec issue_token_and_refresh(auth(), appctx())
                                            -> {ok, {appctx(), response()}} |
                                                 {error, invalid_authorization}.
@@ -304,8 +337,10 @@ verify_access_code(AccessCode, Client, AppCtx1) ->
         Error -> Error
     end.
 
-%% @doc Verifies an refresh token RefreshToken, returning a new Access Token
-%%      if successful. Otherwise, an OAuth2 error code is returned.
+%% @doc Validates a request for an access token from a refresh token, issuing
+%%      a new access token if valid. Use it to implement the following steps of
+%%      RFC 6749:
+%%      - 6. Refreshing an Access Token.
 -spec refresh_access_token(binary(), binary(), token(), scope(), appctx())
                         -> {ok, {appctx(), response()}} | {error, error()}.
 refresh_access_token(CId, CSecret, RefreshToken, Scope, AppCtx1) ->
