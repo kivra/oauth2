@@ -14,6 +14,9 @@
 %%% OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 %%%
 %%% @doc Erlang OAuth 2.0 implementation
+%%%
+%%%      This library is designed to simplify the implementation of the
+%%%      server side of OAuth2 (http://tools.ietf.org/html/rfc6749).
 %%% @end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -25,6 +28,7 @@
 %%%_ * API -------------------------------------------------------------
 -export([authorize_password/4]).
 -export([authorize_password/6]).
+-export([authorize_password/7]).
 -export([authorize_resource_owner/3]).
 -export([authorize_client_credentials/4]).
 -export([authorize_code_grant/5]).
@@ -50,15 +54,14 @@
 -define(TOKEN,   (oauth2_config:token_generation())).
 
 %%%_ * Types -----------------------------------------------------------
--record(authorization, {
-                        client   = undefined    :: undefined | term(),
-                        resowner = undefined    :: undefined | term(),
-                        scope                   :: scope(),
-                        ttl      = 0            :: non_neg_integer()
-                       }).
+-record(a, { client   = undefined    :: undefined | term()
+           , resowner = undefined    :: undefined | term()
+           , scope                   :: scope()
+           , ttl      = 0            :: non_neg_integer()
+           }).
 
 -type context()  :: proplists:proplist().
--type auth()     :: #authorization{}.
+-type auth()     :: #a{}.
 -type token()    :: binary().
 -type response() :: oauth2_response:response().
 -type lifetime() :: non_neg_integer().
@@ -72,9 +75,8 @@
 %%%_* Code =============================================================
 %%%_ * API -------------------------------------------------------------
 
-%% @doc Validates a request fon an access token from resource owner's
+%% @doc Validates a request for an access token from resource owner's
 %%      credentials. Use it to implement the following steps of RFC 6749:
-%%      - 4.2.1. Implicit Grant > Authorization Request.
 %%      - 4.3.2. Resource Owner Password Credentials Grant >
 %%        Access Token Request, when the client is public.
 -spec authorize_password(binary(), binary(), scope(), appctx())
@@ -87,7 +89,7 @@ authorize_password(UId, Pwd, Scope, AppCtx1) ->
                 {error, _}              -> {error, invalid_scope};
                 {ok, {AppCtx2, Scope2}} ->
                     {ok, { AppCtx2
-                         , #authorization{
+                         , #a{
                                resowner = ResOwner
                              , scope    = Scope2
                              , ttl      = oauth2_config:expiry_time(
@@ -95,7 +97,7 @@ authorize_password(UId, Pwd, Scope, AppCtx1) ->
             end
     end.
 
-%% @doc Validates a request fon an access token from client and resource
+%% @doc Validates a request for an access token from client and resource
 %%      owner's credentials. Use it to implement the following steps of
 %%      RFC 6749:
 %%      - 4.3.2. Resource Owner Password Credentials Grant >
@@ -105,24 +107,33 @@ authorize_password(UId, Pwd, Scope, AppCtx1) ->
                             -> {ok, {appctx(), auth()}} | {error, error()}.
 authorize_password(CId, CSecret, UId, Pwd, Scope, AppCtx1) ->
     case ?BACKEND:authenticate_client(CId, CSecret, AppCtx1) of
-        {error, _}               -> {error, invalid_client};
+        {error, _}              -> {error, invalid_client};
         {ok, {AppCtx2, Client}} ->
-            case ?BACKEND:authenticate_username_password(UId, Pwd, AppCtx2) of
-                {error, _}                -> {error, access_denied};
-                {ok, {AppCtx3, ResOwner}} ->
-                    case ?BACKEND:verify_resowner_scope(ResOwner, Scope,
-                                                        AppCtx3) of
-                        {error, _}              -> {error, invalid_scope};
-                        {ok, {AppCtx4, Scope2}} ->
-                            {ok, { AppCtx4
-                                 , #authorization{
-                                       client = Client
-                                     , resowner = ResOwner
-                                     , scope    = Scope2
-                                     , ttl      = oauth2_config:expiry_time(
-                                                        password_credentials) } 
-                                 }}
-                    end
+            case authorize_password(UId, Pwd, Scope, AppCtx2) of
+                {error, _} = E        -> E;
+                {ok, {AppCtx3, Auth}} -> {ok, {AppCtx3, Auth#a{client=Client}}}
+            end
+    end.
+
+%% @doc Validates a request for an access token from client and resource
+%%      owner's credentials. Use it to implement the following steps of
+%%      RFC 6749:
+%%      - 4.2.1. Implicit Grant > Authorization Request. when the client
+%%      is public.
+-spec authorize_password( binary(), binary(), binary(), binary(), binary()
+                        , scope(), appctx())
+                            -> {ok, {appctx(), auth()}} | {error, error()}.
+authorize_password(CId, CSecret, RedirUri, UId, Pwd, Scope, AppCtx1) ->
+    case ?BACKEND:authenticate_client(CId, CSecret, AppCtx1) of
+        {error, _}              -> {error, invalid_client};
+        {ok, {AppCtx2, Client}} ->
+            case ?BACKEND:verify_redirection_uri(Client, RedirUri, AppCtx2) of
+                {ok, AppCtx3} ->
+                    case authorize_password(UId, Pwd, Scope, AppCtx3) of
+                        {error, _} = E        -> E;
+                        {ok, {AppCtx4, Auth}} -> {ok, {AppCtx4, Auth#a{client=Client}}}
+                    end;
+                _ -> {error, invalid_grant}
             end
     end.
 
@@ -134,15 +145,13 @@ authorize_resource_owner(ResOwner, Scope, AppCtx1) ->
     case ?BACKEND:verify_resowner_scope(ResOwner, Scope, AppCtx1) of
         {error, _}              -> {error, invalid_scope};
         {ok, {AppCtx2, Scope2}} ->
-            {ok, { AppCtx2
-                 , #authorization{
-                       resowner = ResOwner
-                     , scope    = Scope2
-                     , ttl      = oauth2_config:expiry_time(
-                                      password_credentials) } }}
+            {ok, {AppCtx2 , #a{ resowner = ResOwner
+                              , scope    = Scope2
+                              , ttl      = oauth2_config:expiry_time(
+                                                     password_credentials) } }}
     end.
 
-%% @doc Validates a request fon an access token from client's credentials.
+%% @doc Validates a request for an access token from client's credentials.
 %%      Use it to implement the following steps of RFC 6749:
 %%      - 4.4.2. Client Credentials Grant > Access Token Request.
 -spec authorize_client_credentials(binary(), binary(), scope(), appctx())
@@ -154,12 +163,10 @@ authorize_client_credentials(CId, CSecret, Scope, AppCtx1) ->
             case ?BACKEND:verify_client_scope(Client, Scope, AppCtx2) of
                 {error, _}   -> {error, invalid_scope};
                 {ok, {AppCtx3, Scope2}} ->
-                    {ok, { AppCtx3
-                         , #authorization{
-                              client = Client
-                            , scope  = Scope2
-                            , ttl    = oauth2_config:expiry_time(
-                                           client_credentials) } }}
+                    {ok, {AppCtx3, #a{ client = Client
+                                     , scope  = Scope2
+                                     , ttl    = oauth2_config:expiry_time(
+                                                       client_credentials) } }}
             end
     end.
 
@@ -180,13 +187,12 @@ authorize_code_grant(CId, CSecret, Code, RedirUri, AppCtx1) ->
                                                                 Code
                                                               , AppCtx4),
                             {ok, { AppCtx5
-                                 , #authorization{
-                                    client   = Client
-                                  , resowner = get_( GrantCtx
-                                                   , <<"resource_owner">> )
-                                  , scope    = get_(GrantCtx, <<"scope">>)
-                                  , ttl      =  oauth2_config:expiry_time(
-                                                    password_credentials) }}};
+                                 , #a{ client   = Client
+                                     , resowner = get_( GrantCtx
+                                                      , <<"resource_owner">> )
+                                     , scope    = get_(GrantCtx, <<"scope">>)
+                                     , ttl      =  oauth2_config:expiry_time(
+                                                      password_credentials) }}};
                         Error ->
                             Error
                     end;
@@ -194,7 +200,7 @@ authorize_code_grant(CId, CSecret, Code, RedirUri, AppCtx1) ->
             end
     end.
 
-%% @doc Validates a request fon an authorization code from client and resource
+%% @doc Validates a request for an authorization code from client and resource
 %%      owner's credentials. Use it to implement the following steps of
 %%      RFC 6749:
 %%      - 4.1.1. Authorization Code Grant > Authorization Request.
@@ -220,12 +226,11 @@ authorize_code_request(CId, RedirUri, UId, Pwd, Scope, AppCtx1) ->
                                 {error, _}              -> {error, invalid_scope};
                                 {ok, {AppCtx5, Scope2}} ->
                                     TTL = oauth2_config:expiry_time(code_grant),
-                                    {ok, { AppCtx5
-                                         , #authorization{ client   = Client
-                                                         , resowner = ResOwner
-                                                         , scope    = Scope2
-                                                         , ttl      = TTL
-                                                         } }}
+                                    {ok, {AppCtx5, #a{ client   = Client
+                                                     , resowner = ResOwner
+                                                     , scope    = Scope2
+                                                     , ttl      = TTL
+                                                     } }}
                             end
                     end;
                 _ ->
@@ -238,7 +243,7 @@ authorize_code_request(CId, RedirUri, UId, Pwd, Scope, AppCtx1) ->
 %%      - 4.1.2. Authorization Code Grant > Authorization Response, with the
 %%        result of authorize_code_request/6.
 -spec issue_code(auth(), appctx()) -> {ok, {appctx(), response()}}.
-issue_code(#authorization{client = Client, resowner = ResOwner,
+issue_code(#a{client = Client, resowner = ResOwner,
                            scope = Scope, ttl = TTL}, AppCtx1) ->
     ExpiryAbsolute = seconds_since_epoch(TTL),
     GrantContext   = build_context(Client, ExpiryAbsolute, ResOwner, Scope),
@@ -258,7 +263,7 @@ issue_code(#authorization{client = Client, resowner = ResOwner,
 %%      - 4.1.4. Authorization Code Grant > Authorization Response, with the
 %%        result of authorize_code_grant/5 when no refresh token must be issued.
 %%      - 4.2.2. Implicit Grant > Access Token Response, with the result of
-%%        authorize_password/4.
+%%        authorize_password/7.
 %%      - 4.3.3. Resource Owner Password Credentials Grant >
 %%        Access Token Response, with the result of authorize_password/4 or
 %%        authorize_password/6 when the client is public or no refresh token
@@ -266,7 +271,7 @@ issue_code(#authorization{client = Client, resowner = ResOwner,
 %%      - 4.4.3. Client Credentials Grant > Access Token Response, with the
 %%        result of authorize_client_credentials/4.
 -spec issue_token(auth(), appctx()) -> {ok, {appctx(), response()}}.
-issue_token(#authorization{client = Client, resowner = ResOwner,
+issue_token(#a{client = Client, resowner = ResOwner,
                            scope = Scope, ttl = TTL}, AppCtx1) ->
     ExpiryAbsolute = seconds_since_epoch(TTL),
     GrantContext   = build_context(Client, ExpiryAbsolute, ResOwner, Scope),
@@ -286,13 +291,14 @@ issue_token(#authorization{client = Client, resowner = ResOwner,
 -spec issue_token_and_refresh(auth(), appctx())
                                            -> {ok, {appctx(), response()}} |
                                                 {error, invalid_authorization}.
-issue_token_and_refresh(#authorization{client = undefined}, _AppCtx1) ->
+issue_token_and_refresh(#a{client = undefined}, _AppCtx1) ->
   {error, invalid_authorization};
-issue_token_and_refresh(#authorization{resowner = undefined}, _AppCtx1) ->
+issue_token_and_refresh(#a{resowner = undefined}, _AppCtx1) ->
   {error, invalid_authorization};
-issue_token_and_refresh(#authorization{client = Client, resowner = ResOwner,
-                                       scope = Scope, ttl = TTL}, AppCtx1)
-                                       when ResOwner /= undefined ->
+issue_token_and_refresh(#a{ client = Client
+                          , resowner = ResOwner
+                          , scope = Scope
+                          , ttl = TTL}, AppCtx1) when ResOwner /= undefined ->
     ExpiryAbsolute = seconds_since_epoch(TTL),
     GrantContext   = build_context(Client, ExpiryAbsolute, ResOwner, Scope),
     AccessToken    = ?TOKEN:generate(GrantContext),
@@ -361,13 +367,11 @@ refresh_access_token(CId, CSecret, RefreshToken, Scope, AppCtx1) ->
                                                         , <<"resource_owner">> ),
                                     TTL = oauth2_config:expiry_time(
                                             password_credentials),
-                                    issue_token( #authorization{
-                                                   client   = Client
-                                                 , resowner = ResOwner
-                                                 , scope    = VerScope
-                                                 , ttl      = TTL
-                                                 }
-                                                , AppCtx4);
+                                    issue_token(#a{ client   = Client
+                                                  , resowner = ResOwner
+                                                  , scope    = VerScope
+                                                  , ttl      = TTL
+                                                  }, AppCtx4);
                                 {error, _Reason} -> {error, invalid_scope}
                             end;
                         false ->

@@ -143,6 +143,31 @@ authorize_resource_owner_test_() ->
                 ]
         end}.
 
+authorize_implicit_grant_test_() ->
+    {setup,
+        fun start/0,
+        fun stop/1,
+        fun(_) ->
+             [
+              fun() ->
+                      {ok, {foo_context, Auth}} =
+                          oauth2:authorize_password( ?CLIENT_ID
+                                                   , ?CLIENT_SECRET
+                                                   , ?CLIENT_URI
+                                                   , ?USER_NAME
+                                                   , ?USER_PASSWORD
+                                                   , ?USER_SCOPE
+                                                   , foo_context),
+                      {ok, {foo_context, Response}} =
+                          oauth2:issue_token(Auth, foo_context),
+                      {ok, Token} = oauth2_response:access_token(Response),
+                      ?assertMatch( {ok, _}
+                                  , oauth2:verify_access_token( Token
+                                                              , foo_context ))
+              end
+             ]
+        end}.
+
 bad_authorize_client_credentials_test_() ->
     {setup,
         fun start/0,
@@ -464,7 +489,6 @@ issue_access_token(Context) ->
     {ok, {Context, Response}} =
         oauth2:issue_token(Authorization, Context),
     {ok, Response}.
-
 
 issue_access_code(Context) ->
     {ok, {Context, Auth}} =
