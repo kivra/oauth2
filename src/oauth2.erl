@@ -85,10 +85,10 @@ authorize_password(UId, Pwd, Scope, AppCtx1) ->
     case ?BACKEND:authenticate_username_password(UId, Pwd, AppCtx1) of
         {error, _}                -> {error, access_denied};
         {ok, {AppCtx2, ResOwner}} ->
-            case ?BACKEND:verify_resowner_scope(ResOwner, Scope, AppCtx1) of
+            case ?BACKEND:verify_resowner_scope(ResOwner, Scope, AppCtx2) of
                 {error, _}              -> {error, invalid_scope};
-                {ok, {AppCtx2, Scope2}} ->
-                    {ok, { AppCtx2
+                {ok, {AppCtx3, Scope2}} ->
+                    {ok, { AppCtx3
                          , #a{
                                resowner = ResOwner
                              , scope    = Scope2
