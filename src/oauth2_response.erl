@@ -41,6 +41,9 @@
 -export([scope/2]).
 -export([token_type/1]).
 -export([to_proplist/1]).
+-ifndef(pre17).
+-export([to_map/1]).
+-endif.
 
 -export_type([response/0]).
 
@@ -153,21 +156,35 @@ token_type(#response{}) ->
 
 -spec to_proplist(response()) -> proplists:proplist().
 to_proplist(Response) ->
-    Keys = record_info(fields, response),
-    Values = tl(tuple_to_list(Response)), %% Head is 'response'!
-    to_proplist(Keys, Values).
+    response_foldr(Response, fun(Key, Value, Acc) -> [{Key, Value} | Acc] end, []).
+
+-ifndef(pre17).
+-spec to_map(response()) -> map(binary(), any()).
+to_map(Response) ->
+    response_foldr(Response, fun(Key, Value, Acc) -> maps:put(Key, Value, Acc) end, maps:new()).
+-endif.
 
 %%%_* Private functions ================================================
-to_proplist([], []) ->
-    [];
-to_proplist([_ | Ks], [undefined | Vs]) ->
-    to_proplist(Ks, Vs);
-to_proplist([expires_in | Ks], [V | Vs]) ->
-    [{<<"expires_in">>, V} | to_proplist(Ks, Vs)];
-to_proplist([K | Ks], [V | Vs]) ->
+-spec response_foldr(Response, Fun, Acc0) -> Return when
+    Response :: response(),
+    Fun      :: fun((Key::binary(), Value::any(), Acc::any()) -> Acc::any()),
+    Acc0     :: any(),
+    Return   :: any().
+response_foldr(Record, Fun, Acc0) ->
+    Keys = record_info(fields, response),
+    Values = tl(tuple_to_list(Record)), %% Head is 'response'!
+    response_foldr(Keys, Values, Fun, Acc0).
+
+response_foldr([], [], _Fun, Acc0) ->
+    Acc0;
+response_foldr([_ | Ks], [undefined | Vs], Fun, Acc) ->
+    response_foldr(Ks, Vs, Fun, Acc);
+response_foldr([expires_in | Ks], [V | Vs], Fun, Acc) ->
+    Fun(<<"expires_in">>, V, response_foldr(Ks, Vs, Fun, Acc));
+response_foldr([K | Ks], [V | Vs], Fun, Acc) ->
     Key = atom_to_binary(K, latin1),
     Value = to_binary(V),
-    [{Key, Value} | to_proplist(Ks, Vs)].
+    Fun(Key, Value, response_foldr(Ks, Vs, Fun, Acc)).
 
 to_binary(Binary) when is_binary(Binary) ->
     Binary;
