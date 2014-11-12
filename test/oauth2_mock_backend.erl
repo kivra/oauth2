@@ -29,8 +29,8 @@
 -behavior(oauth2_backend).
 
 %%% Behavior API
--export([authenticate_username_password/3]).
--export([authenticate_client/3]).
+-export([authenticate_user/2]).
+-export([authenticate_client/2]).
 -export([get_client_identity/2]).
 -export([associate_access_code/3]).
 -export([associate_refresh_token/3]).
@@ -52,15 +52,15 @@
 -export([stop/0]).
 
 %%% Placeholder values that the mock backend will recognize.
--define(USER_NAME,     <<"herp">>).
--define(USER_PASSWORD, <<"derp">>).
--define(USER_SCOPE,    [<<"xyz">>]).
--define(RESOURCE_OWNER, <<"user">>).
+-define(UNAME,     <<"herp">>).
+-define(PASSWORD,  <<"derp">>).
+-define(USCOPE,    [<<"xyz">>]).
+-define(RES_OWNER, <<"user">>).
 
--define(CLIENT_ID,     <<"TiaUdYODLOMyLkdaKkqlmhsl9QJ94a">>).
--define(CLIENT_SECRET, <<"fvfDMAwjlruC9rv5FsLjmyrihCcIKJL">>).
--define(CLIENT_SCOPE,  <<"abc">>).
--define(CLIENT_URI,    <<"https://no.where/cb">>).
+-define(CID,        <<"TiaUdYODLOMyLkdaKkqlmhsl9QJ94a">>).
+-define(SECRET,     <<"fvfDMAwjlruC9rv5FsLjmyrihCcIKJL">>).
+-define(CSCOPE,     <<"abc">>).
+-define(CLIENT_URI, <<"https://no.where/cb">>).
 
 -define(ETS_TABLE, access_tokens).
 
@@ -68,24 +68,16 @@
 %%% API
 %%%===================================================================
 
-authenticate_username_password(?USER_NAME, ?USER_PASSWORD, Ctx) ->
-    {ok, {Ctx, {user, 31337}}};
-authenticate_username_password(?USER_NAME, _, _) ->
-    {error, badpass};
-authenticate_username_password(_, _, _) ->
-    {error, notfound}.
+authenticate_user({?UNAME, ?PASSWORD}, Ctx) -> {ok, {Ctx, {user, 31337}}};
+authenticate_user({?UNAME, _}, _)           -> {error, badpass};
+authenticate_user(_, _)                     -> {error, notfound}.
 
-authenticate_client(?CLIENT_ID, ?CLIENT_SECRET, Ctx) ->
-    {ok, {Ctx, {client, 4711}}};
-authenticate_client(?CLIENT_ID, _, _) ->
-    {error, badsecret};
-authenticate_client(_, _, _) ->
-    {error, notfound}.
+authenticate_client({?CID, ?SECRET}, Ctx) -> {ok, {Ctx, {client, 4711}}};
+authenticate_client({?CID, _}, _)         -> {error, badsecret};
+authenticate_client(_, _)                 -> {error, notfound}.
 
-get_client_identity(?CLIENT_ID, Ctx) ->
-    {ok, {Ctx, {client, 4711}}};
-get_client_identity(_, _) ->
-    {error, notfound}.
+get_client_identity(?CID, Ctx) -> {ok, {Ctx, {client, 4711}}};
+get_client_identity(_, _)      -> {error, notfound}.
 
 associate_access_code(AccessCode, Context, AppContext) ->
     associate_access_token(AccessCode, Context, AppContext).
@@ -120,32 +112,34 @@ revoke_access_token(AccessToken, AppContext) ->
 revoke_refresh_token(_RefreshToken, AppContext) ->
     {ok, AppContext}.
 
-get_redirection_uri(?CLIENT_ID, AppContext) -> {ok, {AppContext, ?CLIENT_URI}};
-get_redirection_uri(_, _)                   -> {error, notfound}.
+get_redirection_uri({?CID, ?SECRET}, Ctx) -> {ok, {Ctx, ?CLIENT_URI}};
+get_redirection_uri(_, _)                 -> {error, notfound}.
 
-verify_redirection_uri({client, 4711}, ?CLIENT_URI, AppContext) ->
-    {ok, AppContext};
-verify_redirection_uri(_, _, _) ->
-    {error, mismatch}.
+verify_redirection_uri({client, 4711}, ?CLIENT_URI, Ctx) -> {ok, Ctx};
+verify_redirection_uri(_, _, _)                          -> {error, mismatch}.
 
-verify_client_scope({client, 4711}, [], AppContext) ->
-    {ok, {AppContext, []}};
-verify_client_scope({client, 4711}, ?CLIENT_SCOPE, AppContext) ->
-    {ok, {AppContext, ?CLIENT_SCOPE}};
-verify_client_scope(_, _, _) ->
-    {error, invalid_scope}.
+verify_client_scope({?CID, ?SECRET}, [], Ctx)      -> {ok, {Ctx, []}};
+verify_client_scope({?CID, ?SECRET}, ?CSCOPE, Ctx) -> {ok, {Ctx, ?CSCOPE}};
+verify_client_scope(_, _, _)                       -> {error, invalid_scope}.
 
-verify_resowner_scope({user, 31337}, ?USER_SCOPE, AppContext) ->
-    {ok, {AppContext, ?USER_SCOPE}};
-verify_resowner_scope(_, _, _) ->
-    {error, invalid_scope}.
+verify_resowner_scope({?UNAME, ?PASSWORD}, ?USCOPE, Ctx) -> {ok, {Ctx, ?USCOPE}};
+verify_resowner_scope(_, _, _)                     -> {error, invalid_scope}.
 
 verify_scope(Scope, Scope, AppContext) -> {ok, {AppContext, Scope}};
 verify_scope(_, _, _)                  -> {error, invalid_scope}.
 
-start() ->
-    %% Set up the ETS table for holding access tokens.
-    ets:new(?ETS_TABLE, [public, named_table, {read_concurrency, true}]).
+%% Set up the ETS table for holding access tokens.
+start() -> ets:new(?ETS_TABLE, [public, named_table, {read_concurrency, true}]).
+stop()  -> ets:delete(?ETS_TABLE).
 
-stop() ->
-    ets:delete(?ETS_TABLE).
+%%%_* Tests ============================================================
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+-endif.
+
+%%%_* Emacs ============================================================
+%%% Local Variables:
+%%% allout-layout: t
+%%% erlang-indent-level: 4
+%%% End:
