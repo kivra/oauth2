@@ -51,30 +51,51 @@ bad_authorize_password_test_() ->
                 [
                  ?_assertMatch({ok, _},
                                oauth2:authorize_password(
+                                 <<"password">>,
+                                 <<"herp">>,
+                                 <<"derp">>,
+                                 [<<"xyz">>],
+                                 foo_context)),
+                 ?_assertMatch({error, unsupported_grant_type},
+                               oauth2:authorize_password(
+                                 <<"foo">>,
                                  <<"herp">>,
                                  <<"derp">>,
                                  [<<"xyz">>],
                                  foo_context)),
                  ?_assertMatch({error, invalid_scope},
                                oauth2:authorize_password(
+                                 <<"password">>,
                                  <<"herp">>,
                                  <<"derp">>,
                                  <<"bad_scope">>,
                                  foo_context)),
                  ?_assertMatch({error, access_denied},
                                oauth2:authorize_password(
+                                 <<"password">>,
                                  <<"herp">>,
                                  <<"herp">>,
                                  <<"xyz">>,
                                  foo_context)),
                  ?_assertMatch({error, access_denied},
                                oauth2:authorize_password(
+                                 <<"password">>,
                                  <<"derp">>,
                                  <<"derp">>,
                                  <<"xyz">>,
                                  foo_context)),
                  ?_assertMatch({ok, _},
                                oauth2:authorize_password(
+                                 <<"password">>,
+                                 ?CLIENT_ID,
+                                 ?CLIENT_SECRET,
+                                 <<"herp">>,
+                                 <<"derp">>,
+                                 [<<"xyz">>],
+                                 foo_context)),
+                 ?_assertMatch({error, unsupported_grant_type},
+                               oauth2:authorize_password(
+                                 <<"foo">>,
                                  ?CLIENT_ID,
                                  ?CLIENT_SECRET,
                                  <<"herp">>,
@@ -83,6 +104,7 @@ bad_authorize_password_test_() ->
                                  foo_context)),
                  ?_assertMatch({error, invalid_scope},
                                oauth2:authorize_password(
+                                 <<"password">>,
                                  ?CLIENT_ID,
                                  ?CLIENT_SECRET,
                                  <<"herp">>,
@@ -91,6 +113,7 @@ bad_authorize_password_test_() ->
                                  foo_context)),
                  ?_assertMatch({error, access_denied},
                                oauth2:authorize_password(
+                                 <<"password">>,
                                  ?CLIENT_ID,
                                  ?CLIENT_SECRET,
                                  <<"herp">>,
@@ -99,6 +122,7 @@ bad_authorize_password_test_() ->
                                  foo_context)),
                  ?_assertMatch({error, access_denied},
                                oauth2:authorize_password(
+                                 <<"password">>,
                                  ?CLIENT_ID,
                                  ?CLIENT_SECRET,
                                  <<"derp">>,
@@ -107,6 +131,7 @@ bad_authorize_password_test_() ->
                                  foo_context)),
                  ?_assertMatch({error, invalid_client},
                                oauth2:authorize_password(
+                                 <<"password">>,
                                  ?CLIENT_ID,
                                  <<"gggDMAwklAKc9kq5FsLjKrzihCcI123">>,
                                  <<"herp">>,
@@ -115,6 +140,7 @@ bad_authorize_password_test_() ->
                                  foo_context)),
                  ?_assertMatch({error, invalid_client},
                                oauth2:authorize_password(
+                                 <<"password">>,
                                  <<"XoaUdYODRCMyLkdaKkqlmhsl9QQJ4b">>,
                                  ?CLIENT_SECRET,
                                  <<"herp">>,
@@ -151,7 +177,8 @@ authorize_implicit_grant_test_() ->
              [
               fun() ->
                       {ok, {foo_context, Auth}} =
-                          oauth2:authorize_password( ?CLIENT_ID
+                          oauth2:authorize_password(<<"token">>
+                                                   , ?CLIENT_ID
                                                    , ?CLIENT_SECRET
                                                    , ?CLIENT_URI
                                                    , ?USER_NAME
@@ -176,27 +203,38 @@ bad_authorize_client_credentials_test_() ->
                 [
                  ?_assertMatch({error, invalid_client},
                                oauth2:authorize_client_credentials(
+                                 <<"client_credentials">>,
                                  <<"XoaUdYODRCMyLkdaKkqlmhsl9QQJ4b">>,
                                  <<"fvfDMAwjlruC9rv5FsLjmyrihCcIKJL">>,
                                  <<"abc">>,
                                  foo_context)),
                  ?_assertMatch({error, invalid_scope},
                                oauth2:authorize_client_credentials(
+                                 <<"client_credentials">>,
                                  ?CLIENT_ID,
                                  ?CLIENT_SECRET,
                                  <<"bad_scope">>,
                                  foo_context)),
                  ?_assertMatch({error, invalid_client},
                                oauth2:authorize_client_credentials(
+                                 <<"client_credentials">>,
                                  <<"TiaUdYODLOMyLkdaKkqlmdhsl9QJ94a">>,
                                  <<"gggDMAwklAKc9kq5FsLjKrzihCcI123">>,
                                  <<"abc">>,
                                  foo_context)),
                  ?_assertMatch({error, invalid_client},
                                 oauth2:authorize_client_credentials(
+                                 <<"client_credentials">>,
                                  <<"TiaUdYODLOMyLkdaKkqlmdhsl9QJ94a">>,
                                  <<"fvfDMAwjlruC9rv5FsLjmyrihCcIKJL">>,
                                  <<"cba">>,
+                                 foo_context)),
+                 ?_assertMatch({error, unsupported_grant_type},
+                               oauth2:authorize_client_credentials(
+                                 <<"foo">>,
+                                 ?CLIENT_ID,
+                                 ?CLIENT_SECRET,
+                                 ?CLIENT_SCOPE,
                                  foo_context))
                 ]
         end}.
@@ -237,6 +275,7 @@ bad_ttl_test_() ->
                       {ok, RefreshToken} = oauth2_response:refresh_token(Res2),
                       ?assertEqual({error, invalid_grant},
                                    oauth2:refresh_access_token(
+                                     <<"refresh_token">>,
                                      ?CLIENT_ID,
                                      ?CLIENT_SECRET,
                                      RefreshToken,
@@ -274,6 +313,7 @@ bad_access_code_test_() ->
               fun() ->
                       {error, unauthorized_client} =
                           oauth2:authorize_code_request(
+                                         <<"code">>,
                                          ?CLIENT_ID,
                                          <<"http://in.val.id">>,
                                          ?USER_NAME,
@@ -282,13 +322,24 @@ bad_access_code_test_() ->
                                          foo_context),
                       {error, unauthorized_client} =
                           oauth2:authorize_code_request(
+                                         <<"code">>,
                                          <<"XoaUdYODRCMyLkdaKkqlmhsl9QQJ4b">>,
                                          ?CLIENT_URI,
                                          ?USER_NAME,
                                          ?USER_PASSWORD,
                                          ?CLIENT_SCOPE,
                                          foo_context),
+                      {error, unsupported_response_type} =
+                          oauth2:authorize_code_request(
+                                         <<"foo">>,
+                                         ?CLIENT_ID,
+                                         ?CLIENT_URI,
+                                         ?USER_NAME,
+                                         ?USER_PASSWORD,
+                                         ?CLIENT_SCOPE,
+                                         foo_context),
                       {error, invalid_scope} = oauth2:authorize_code_request(
+                                         <<"code">>,
                                          ?CLIENT_ID,
                                          ?CLIENT_URI,
                                          ?USER_NAME,
@@ -296,6 +347,7 @@ bad_access_code_test_() ->
                                          <<"bad_scope">>,
                                          foo_context),
                       {error, access_denied} = oauth2:authorize_code_request(
+                                         <<"code">>,
                                          ?CLIENT_ID,
                                          ?CLIENT_URI,
                                          <<"herp">>,
@@ -303,6 +355,7 @@ bad_access_code_test_() ->
                                          ?CLIENT_SCOPE,
                                          foo_context),
                       {error, access_denied} = oauth2:authorize_code_request(
+                                         <<"code">>,
                                          ?CLIENT_ID,
                                          ?CLIENT_URI,
                                          <<"derp">>,
@@ -330,6 +383,7 @@ verify_access_code_test_() ->
                                      Code, foo_context)),
                       {ok, {foo_context, Auth2}} =
                           oauth2:authorize_code_grant(
+                                         <<"authorization_code">>,
                                          ?CLIENT_ID,
                                          ?CLIENT_SECRET,
                                          Code,
@@ -354,6 +408,7 @@ bad_refresh_token_test_() ->
               fun() ->
                       {ok, {foo_context, Auth}} =
                           oauth2:authorize_code_request(
+                                         <<"code">>,
                                          ?CLIENT_ID,
                                          ?CLIENT_URI,
                                          ?USER_NAME,
@@ -365,6 +420,7 @@ bad_refresh_token_test_() ->
                       {ok, Code} = oauth2_response:access_code(Response),
                       {ok, {foo_context, Auth2}} =
                           oauth2:authorize_code_grant(
+                                         <<"authorization_code">>,
                                          ?CLIENT_ID,
                                          ?CLIENT_SECRET,
                                          Code,
@@ -375,6 +431,7 @@ bad_refresh_token_test_() ->
                       {ok, RefreshToken} = oauth2_response:refresh_token(Res2),
                       ?assertMatch({error, invalid_client},
                                    oauth2:refresh_access_token(
+                                     <<"refresh_token">>,
                                      <<"foo">>,
                                      ?CLIENT_SECRET,
                                      RefreshToken,
@@ -382,13 +439,23 @@ bad_refresh_token_test_() ->
                                      foo_context)),
                       ?assertMatch({error, invalid_client},
                                    oauth2:refresh_access_token(
+                                     <<"refresh_token">>,
                                      ?CLIENT_ID,
                                      <<"foo">>,
                                      RefreshToken,
                                      ?CLIENT_SCOPE,
                                      foo_context)),
+                      ?assertMatch({error, unsupported_grant_type},
+                                   oauth2:refresh_access_token(
+                                     <<"foo">>,
+                                     ?CLIENT_ID,
+                                     ?CLIENT_SECRET,
+                                     RefreshToken,
+                                     ?CLIENT_SCOPE,
+                                     foo_context)),
                       ?assertMatch({error, invalid_grant},
                                    oauth2:refresh_access_token(
+                                     <<"refresh_token">>,
                                      ?CLIENT_ID,
                                      ?CLIENT_SECRET,
                                      <<"foo">>,
@@ -396,6 +463,7 @@ bad_refresh_token_test_() ->
                                      foo_context)),
                       ?assertMatch({error, invalid_scope},
                                    oauth2:refresh_access_token(
+                                     <<"refresh_token">>,
                                      ?CLIENT_ID,
                                      ?CLIENT_SECRET,
                                      RefreshToken,
@@ -416,6 +484,7 @@ verify_refresh_token_test_() ->
                       {ok, Res2} = issue_token_and_refresh(Res1, foo_context),
                       {ok, RefreshToken} = oauth2_response:refresh_token(Res2),
                       {ok, _} = oauth2:refresh_access_token(
+                                              <<"refresh_token">>,
                                               ?CLIENT_ID,
                                               ?CLIENT_SECRET,
                                               RefreshToken,
@@ -435,6 +504,7 @@ verify_refresh_token_test_() ->
                       {ok, RefreshToken} = oauth2_response:refresh_token(Response),
                       {ok, {foo_context, Response2}} =
                           oauth2:refresh_access_token(
+                              <<"refresh_token">>,
                               ?CLIENT_ID,
                               ?CLIENT_SECRET,
                               RefreshToken,
@@ -448,6 +518,7 @@ verify_refresh_token_test_() ->
                   end, [
                         fun(Context) ->
                             oauth2:authorize_password(
+                                <<"password">>,
                                 ?CLIENT_ID,
                                 ?CLIENT_SECRET,
                                 ?USER_NAME,
@@ -482,6 +553,7 @@ stop(_State) ->
 issue_access_token(Context) ->
     {ok, {Context, Authorization}} =
         oauth2:authorize_client_credentials(
+          <<"client_credentials">>,
           ?CLIENT_ID,
           ?CLIENT_SECRET,
           ?CLIENT_SCOPE,
@@ -493,6 +565,7 @@ issue_access_token(Context) ->
 issue_access_code(Context) ->
     {ok, {Context, Auth}} =
         oauth2:authorize_code_request(
+          <<"code">>,
           ?CLIENT_ID,
           ?CLIENT_URI,
           ?USER_NAME,
@@ -507,6 +580,7 @@ issue_token_and_refresh(Response, Context) ->
     {ok, Code} = oauth2_response:access_code(Response),
     {ok, {Context, Auth2}} =
         oauth2:authorize_code_grant(
+          <<"authorization_code">>,
           ?CLIENT_ID,
           ?CLIENT_SECRET,
           Code,

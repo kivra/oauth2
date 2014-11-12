@@ -26,20 +26,20 @@
 
 %%%_* Exports ==========================================================
 %%%_ * API -------------------------------------------------------------
--export([authorize_password/4]).
--export([authorize_password/6]).
+-export([authorize_password/5]).
 -export([authorize_password/7]).
+-export([authorize_password/8]).
 -export([authorize_resource_owner/3]).
--export([authorize_client_credentials/4]).
--export([authorize_code_grant/5]).
--export([authorize_code_request/6]).
+-export([authorize_client_credentials/5]).
+-export([authorize_code_grant/6]).
+-export([authorize_code_request/7]).
 -export([issue_code/2]).
 -export([issue_token/2]).
 -export([issue_token_and_refresh/2]).
 -export([verify_access_token/2]).
 -export([verify_access_code/2]).
 -export([verify_access_code/3]).
--export([refresh_access_token/5]).
+-export([refresh_access_token/6]).
 
 -export_type([token/0]).
 -export_type([context/0]).
@@ -69,8 +69,9 @@
 -type appctx()   :: term().
 -type error()    :: access_denied | invalid_client | invalid_grant |
                     invalid_request | invalid_authorization | invalid_scope |
-                    unauthorized_client | unsupported_response_type |
-                    server_error | temporarily_unavailable.
+                    unauthorized_client | unsupported_grant_type | 
+                    unsupported_response_type | server_error | 
+                    temporarily_unavailable.
 
 %%%_* Code =============================================================
 %%%_ * API -------------------------------------------------------------
@@ -79,9 +80,9 @@
 %%      credentials. Use it to implement the following steps of RFC 6749:
 %%      - 4.3.2. Resource Owner Password Credentials Grant >
 %%        Access Token Request, when the client is public.
--spec authorize_password(binary(), binary(), scope(), appctx())
+-spec authorize_password(binary(), binary(), binary(), scope(), appctx())
                             -> {ok, {appctx(), auth()}} | {error, error()}.
-authorize_password(UId, Pwd, Scope, AppCtx1) ->
+authorize_password(<<"password">>, UId, Pwd, Scope, AppCtx1) ->
     case ?BACKEND:authenticate_username_password(UId, Pwd, AppCtx1) of
         {error, _}                -> {error, access_denied};
         {ok, {AppCtx2, ResOwner}} ->
@@ -95,44 +96,60 @@ authorize_password(UId, Pwd, Scope, AppCtx1) ->
                              , ttl      = oauth2_config:expiry_time(
                                                 password_credentials) } }}
             end
-    end.
+    end;
+authorize_password(_, _, _, _, _) ->
+    {error, unsupported_grant_type}.
 
 %% @doc Validates a request for an access token from client and resource
 %%      owner's credentials. Use it to implement the following steps of
 %%      RFC 6749:
 %%      - 4.3.2. Resource Owner Password Credentials Grant >
 %%        Access Token Request, when the client is confidential.
--spec authorize_password(binary(), binary(), binary(), binary(), scope(),
-                         appctx())
+-spec authorize_password(binary(), binary(), binary(), binary(),
+                         binary(), scope(), appctx())
                             -> {ok, {appctx(), auth()}} | {error, error()}.
-authorize_password(CId, CSecret, UId, Pwd, Scope, AppCtx1) ->
+authorize_password(<<"password">>, CId, CSecret, UId, Pwd, Scope, AppCtx1) ->
     case ?BACKEND:authenticate_client(CId, CSecret, AppCtx1) of
         {error, _}              -> {error, invalid_client};
         {ok, {AppCtx2, Client}} ->
-            case authorize_password(UId, Pwd, Scope, AppCtx2) of
+            case authorize_password(<<"password">>, UId, Pwd, Scope, 
+                                    AppCtx2) of
                 {error, _} = E        -> E;
                 {ok, {AppCtx3, Auth}} -> {ok, {AppCtx3, Auth#a{client=Client}}}
             end
-    end.
+    end;
+authorize_password(_, _, _, _, _, _, _) ->
+    {error, unsupported_grant_type}.
 
 %% @doc Validates a request for an access token from client and resource
 %%      owner's credentials. Use it to implement the following steps of
 %%      RFC 6749:
-%%      - 4.2.1. Implicit Grant > Authorization Request. when the client
+%%      - 4.2.1. Implicit Grant > Authorization Request, when the client
 %%      is public.
--spec authorize_password( binary(), binary(), binary(), binary(), binary()
-                        , scope(), appctx())
+-spec authorize_password(binary(),  binary(), binary(), binary(), binary(), 
+                         binary(), scope(), appctx())
                             -> {ok, {appctx(), auth()}} | {error, error()}.
-authorize_password(CId, CSecret, RedirUri, UId, Pwd, Scope, AppCtx1) ->
+authorize_password(<<"token">>, CId, CSecret, RedirUri, UId, Pwd, Scope, 
+                   AppCtx1) ->
     case ?BACKEND:authenticate_client(CId, CSecret, AppCtx1) of
         {error, _}              -> {error, invalid_client};
         {ok, {AppCtx2, Client}} ->
             case ?BACKEND:verify_redirection_uri(Client, RedirUri, AppCtx2) of
                 {ok, AppCtx3} ->
-                    case authorize_password(UId, Pwd, Scope, AppCtx3) of
+                    case authorize_password(<<"password">>, UId, Pwd, Scope, 
+                                            AppCtx3) of
                         {error, _} = E        -> E;
                         {ok, {AppCtx4, Auth}} -> {ok, {AppCtx4, Auth#a{client=Client}}}
                     end;
+                _ -> {error, invalid_grant}
+            end
+    end;
+authorize_password(_, CId, CSecret, RedirUri, _, _, _, AppCtx1) ->
+    case ?BACKEND:authenticate_client(CId, CSecret, AppCtx1) of
+        {error, _}              -> {error, invalid_client};
+        {ok, {AppCtx2, Client}} ->
+            case ?BACKEND:verify_redirection_uri(Client, RedirUri, AppCtx2) of
+                {ok, _} -> {error, unsupported_response_type};
                 _ -> {error, invalid_grant}
             end
     end.
@@ -154,9 +171,11 @@ authorize_resource_owner(ResOwner, Scope, AppCtx1) ->
 %% @doc Validates a request for an access token from client's credentials.
 %%      Use it to implement the following steps of RFC 6749:
 %%      - 4.4.2. Client Credentials Grant > Access Token Request.
--spec authorize_client_credentials(binary(), binary(), scope(), appctx())
+-spec authorize_client_credentials(binary(), binary(), binary(), scope(), 
+                                   appctx())
                             -> {ok, {appctx(), auth()}} | {error, error()}.
-authorize_client_credentials(CId, CSecret, Scope, AppCtx1) ->
+authorize_client_credentials(<<"client_credentials">>, CId, CSecret, Scope, 
+                             AppCtx1) ->
     case ?BACKEND:authenticate_client(CId, CSecret, AppCtx1) of
         {error, _}   -> {error, invalid_client};
         {ok, {AppCtx2, Client}} ->
@@ -168,14 +187,18 @@ authorize_client_credentials(CId, CSecret, Scope, AppCtx1) ->
                                      , ttl    = oauth2_config:expiry_time(
                                                        client_credentials) } }}
             end
-    end.
+    end;
+authorize_client_credentials(_, _, _, _, _) ->
+    {error, unsupported_grant_type}.
 
 %% @doc Validates a request for an access token from an authorization code.
 %%      Use it to implement the following steps of RFC 6749:
 %%      - 4.1.3. Authorization Code Grant > Access Token Request.
--spec authorize_code_grant(binary(), binary(), token(), binary(), appctx())
+-spec authorize_code_grant(binary(), binary(), binary(), token(), binary(), 
+                           appctx())
                             -> {ok, {appctx(), auth()}} | {error, error()}.
-authorize_code_grant(CId, CSecret, Code, RedirUri, AppCtx1) ->
+authorize_code_grant(<<"authorization_code">>, CId, CSecret, Code, RedirUri, 
+                     AppCtx1) ->
     case ?BACKEND:authenticate_client(CId, CSecret, AppCtx1) of
         {error, _}   -> {error, invalid_client};
         {ok, {AppCtx2, Client}} ->
@@ -198,6 +221,15 @@ authorize_code_grant(CId, CSecret, Code, RedirUri, AppCtx1) ->
                     end;
                 _ -> {error, invalid_grant}
             end
+    end;
+authorize_code_grant(_, CId, CSecret, _, RedirUri, AppCtx1) ->
+    case ?BACKEND:authenticate_client(CId, CSecret, AppCtx1) of
+        {error, _}   -> {error, invalid_client};
+        {ok, {AppCtx2, Client}} ->
+            case ?BACKEND:verify_redirection_uri(Client, RedirUri, AppCtx2) of
+                {ok, _} -> {error, unsupported_grant_type};
+                _ -> {error, invalid_grant}
+            end
     end.
 
 %% @doc Validates a request for an authorization code from client and resource
@@ -208,10 +240,11 @@ authorize_code_grant(CId, CSecret, Code, RedirUri, AppCtx1) ->
                             , binary()
                             , binary()
                             , binary()
+                            , binary()
                             , scope()
                             , appctx())
                             -> {ok, {appctx(), auth()}} | {error, error()}.
-authorize_code_request(CId, RedirUri, UId, Pwd, Scope, AppCtx1) ->
+authorize_code_request(<<"code">>, CId, RedirUri, UId, Pwd, Scope, AppCtx1) ->
     case ?BACKEND:get_client_identity(CId, AppCtx1) of
         {error, _}   -> {error, unauthorized_client};
         {ok, {AppCtx2, Client}} ->
@@ -233,6 +266,17 @@ authorize_code_request(CId, RedirUri, UId, Pwd, Scope, AppCtx1) ->
                                                      } }}
                             end
                     end;
+                _ ->
+                    {error, unauthorized_client}
+            end
+    end;
+authorize_code_request(_, CId, RedirUri, _, _, _, AppCtx1) ->
+    case ?BACKEND:get_client_identity(CId, AppCtx1) of
+        {error, _}   -> {error, unauthorized_client};
+        {ok, {AppCtx2, Client}} ->
+            case ?BACKEND:verify_redirection_uri(Client, RedirUri, AppCtx2) of
+                {ok, _} ->
+                    {error, unsupported_response_type};
                 _ ->
                     {error, unauthorized_client}
             end
@@ -347,9 +391,11 @@ verify_access_code(AccessCode, Client, AppCtx1) ->
 %%      a new access token if valid. Use it to implement the following steps of
 %%      RFC 6749:
 %%      - 6. Refreshing an Access Token.
--spec refresh_access_token(binary(), binary(), token(), scope(), appctx())
+-spec refresh_access_token(binary(), binary(), binary(), token(), scope(), 
+                           appctx())
                         -> {ok, {appctx(), response()}} | {error, error()}.
-refresh_access_token(CId, CSecret, RefreshToken, Scope, AppCtx1) ->
+refresh_access_token(<<"refresh_token">>, CId, CSecret, RefreshToken, Scope, 
+                     AppCtx1) ->
     case ?BACKEND:authenticate_client(CId, CSecret, AppCtx1) of
         {ok, {AppCtx2, Client}} ->
             case ?BACKEND:resolve_refresh_token(RefreshToken, AppCtx2) of
@@ -382,7 +428,9 @@ refresh_access_token(CId, CSecret, RefreshToken, Scope, AppCtx1) ->
                 _ -> {error, invalid_grant}
             end;
         _ -> {error, invalid_client}
-    end.
+    end;
+refresh_access_token(_, _, _, _, _, _) ->
+    {error, unsupported_grant_type}.
 
 %% @doc Verifies an access token AccessToken, returning its associated
 %%      context if successful. Otherwise, an OAuth2 error code is returned.
