@@ -241,14 +241,16 @@ issue_token_and_refresh(#a{resowner = undefined}, _Ctx) ->
   {error, invalid_authorization};
 issue_token_and_refresh( #a{client=Client, resowner=Owner, scope=Scope, ttl=TTL}
                        , Ctx0 ) ->
-    GrantContext = build_context(Client,seconds_since_epoch(TTL),Owner,Scope),
-    AccessToken  = ?TOKEN:generate(GrantContext),
-    RefreshToken = ?TOKEN:generate(GrantContext),
+    RTTL         = oauth2_config:expiry_time(refresh_token),
+    AccessCtx    = build_context(Client,seconds_since_epoch(TTL),Owner,Scope),
+    RefreshCtx   = build_context(Client,seconds_since_epoch(RTTL),Owner,Scope),
+    AccessToken  = ?TOKEN:generate(AccessCtx),
+    RefreshToken = ?TOKEN:generate(RefreshCtx),
     {ok, Ctx1}   = ?BACKEND:associate_access_token( AccessToken
-                                                  , GrantContext
+                                                  , AccessCtx
                                                   , Ctx0),
     {ok, Ctx2}   = ?BACKEND:associate_refresh_token( RefreshToken
-                                                   , GrantContext
+                                                   , RefreshCtx
                                                    , Ctx1 ),
     {ok, {Ctx2, oauth2_response:new(AccessToken,TTL,Owner,Scope,RefreshToken)}}.
 

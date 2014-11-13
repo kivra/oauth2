@@ -83,10 +83,6 @@
 -callback revoke_refresh_token(token(), appctx()) ->
                                           {ok, appctx()} | {error, notfound}.
 
-%% @doc Returns the redirection URI associated with the client ClientId.
--callback get_redirection_uri(binary(), appctx()) ->
-                              {error, notfound} | {ok, {appctx(), binary()}}.
-
 %% @doc Returns a client identity for a given id.
 -callback get_client_identity(client(), appctx()) ->
                     {ok, {appctx(), client()}} | {error, notfound | badsecret}.
