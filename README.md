@@ -118,7 +118,7 @@ The following example demonstrates a basic app.config section for oauth2.
         ,{client_credentials, [
             {expiry_time, 86400}
         ]}
-        ,{refrest_token, [
+        ,{refresh_token, [
             {expiry_time, 2592000} %% 30 Days
         ]}
         ,{code_grant, [
