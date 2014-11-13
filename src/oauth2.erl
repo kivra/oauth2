@@ -184,8 +184,8 @@ authorize_code_request(User, Client, RedirUri, Scope, Ctx0) ->
                 {ok, Ctx2} ->
                     case auth_user(User, Scope, Ctx2) of
                         {error, _}=E       -> E;
-                        {ok, {Ctx2, Auth}} ->
-                            {ok, { Ctx2
+                        {ok, {Ctx3, Auth}} ->
+                            {ok, { Ctx3
                                  , Auth#a{ client=C
                                          , ttl   =oauth2_config:expiry_time(
                                                                     code_grant)
