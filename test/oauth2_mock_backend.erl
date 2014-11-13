@@ -122,7 +122,7 @@ verify_client_scope({?CID, ?SECRET}, [], Ctx)      -> {ok, {Ctx, []}};
 verify_client_scope({?CID, ?SECRET}, ?CSCOPE, Ctx) -> {ok, {Ctx, ?CSCOPE}};
 verify_client_scope(_, _, _)                       -> {error, invalid_scope}.
 
-verify_resowner_scope({?UNAME, ?PASSWORD}, ?USCOPE, Ctx) -> {ok, {Ctx, ?USCOPE}};
+verify_resowner_scope({user, 31337}, ?USCOPE, Ctx) -> {ok, {Ctx, ?USCOPE}};
 verify_resowner_scope(_, _, _)                     -> {error, invalid_scope}.
 
 verify_scope(Scope, Scope, AppContext) -> {ok, {AppContext, Scope}};

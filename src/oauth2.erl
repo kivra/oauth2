@@ -344,7 +344,7 @@ auth_user(User, Scope0, Ctx0) ->
     case ?BACKEND:authenticate_user(User, Ctx0) of
         {error, _}          -> {error, access_denied};
         {ok, {Ctx1, Owner}} ->
-            case ?BACKEND:verify_resowner_scope(User, Scope0, Ctx1) of
+            case ?BACKEND:verify_resowner_scope(Owner, Scope0, Ctx1) of
                 {error, _}           -> {error, invalid_scope};
                 {ok, {Ctx2, Scope1}} ->
                     {ok, {Ctx2, #a{ resowner = Owner
