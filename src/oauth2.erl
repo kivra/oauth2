@@ -203,7 +203,7 @@ issue_code(#a{client=Client, resowner=Owner, scope=Scope, ttl=TTL}, Ctx0) ->
     GrantContext = build_context(Client, seconds_since_epoch(TTL), Owner, Scope),
     AccessCode   = ?TOKEN:generate(GrantContext),
     {ok, Ctx1}   = ?BACKEND:associate_access_code(AccessCode,GrantContext,Ctx0),
-    {ok, {Ctx1, oauth2_response:new(<<>>,TTL,Owner,Scope,<<>>,AccessCode)}}.
+    {ok, {Ctx1, oauth2_response:new(<<>>,TTL,Owner,Scope,<<>>,<<>>,AccessCode)}}.
 
 %% @doc Issues an access token without refresh token from an authorization.
 %%      Use it to implement the following steps of RFC 6749:
@@ -235,7 +235,7 @@ issue_token(#a{client=Client, resowner=Owner, scope=Scope, ttl=TTL}, Ctx0) ->
 %%        the client is confidential and a refresh token must be issued.
 -spec issue_token_and_refresh(auth(), appctx()) -> {ok, {appctx(), response()}}
                                                  | {error, invalid_authorization}.
-issue_token_and_refresh(#a{client = undefined}, _Ctx) ->
+issue_token_and_refresh(#a{client = undefined}, _Ctx)   ->
   {error, invalid_authorization};
 issue_token_and_refresh(#a{resowner = undefined}, _Ctx) ->
   {error, invalid_authorization};
@@ -252,7 +252,12 @@ issue_token_and_refresh( #a{client=Client, resowner=Owner, scope=Scope, ttl=TTL}
     {ok, Ctx2}   = ?BACKEND:associate_refresh_token( RefreshToken
                                                    , RefreshCtx
                                                    , Ctx1 ),
-    {ok, {Ctx2, oauth2_response:new(AccessToken,TTL,Owner,Scope,RefreshToken)}}.
+    {ok, {Ctx2, oauth2_response:new( AccessToken
+                                   , TTL
+                                   , Owner
+                                   , Scope
+                                   , RefreshToken
+                                   , RTTL )}}.
 
 %% @doc Verifies an access code AccessCode, returning its associated
 %%      context if successful. Otherwise, an OAuth2 error code is returned.

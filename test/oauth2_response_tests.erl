@@ -88,7 +88,7 @@ new_4_test_() ->
 
 new_5_test_() ->
     {setup,
-     fun() -> oauth2_response:new(?ACCESS, ?EXPIRY, ?RESOURCE_OWNER, ?SCOPE, ?REFRESH) end,
+     fun() -> oauth2_response:new(?ACCESS, ?EXPIRY, ?RESOURCE_OWNER, ?SCOPE, ?REFRESH, ?EXPIRY) end,
      fun(_) -> ok end,
      fun(Response) ->
              [
@@ -102,7 +102,7 @@ new_5_test_() ->
 
 new_6_test_() ->
     {setup,
-     fun() -> oauth2_response:new(?ACCESS, ?EXPIRY, ?RESOURCE_OWNER, ?SCOPE, ?REFRESH, ?CODE) end,
+     fun() -> oauth2_response:new(?ACCESS, ?EXPIRY, ?RESOURCE_OWNER, ?SCOPE, ?REFRESH, ?EXPIRY, ?CODE) end,
      fun(_) -> ok end,
      fun(Response) ->
              [
@@ -126,7 +126,7 @@ access_code_test() ->
     ?assertEqual({ok, ?CODE},
                  oauth2_response:access_code(
                    oauth2_response:access_code(
-                     oauth2_response:new([], [], [], [], ?CODE),
+                     oauth2_response:new([], [], [], [], [], ?CODE),
                      ?CODE))).
 
 expires_in_test() ->
@@ -162,16 +162,18 @@ token_type_test() ->
                  oauth2_response:token_type(oauth2_response:new(?ACCESS))).
 
 to_proplist_test() ->
-    Property = ?FORALL({AccessToken, RefreshToken, Expiry, ResourceOwner, Scope},
-                       {non_empty(oauth2:token()), non_empty(oauth2:token()), oauth2:lifetime(), binary(), oauth2:scope()},
+    Property = ?FORALL(
+        {AccessToken, Expiry, ResourceOwner, Scope, RefreshToken, RefreshExpiry},
+        {non_empty(oauth2:token()), oauth2:lifetime(), binary(), oauth2:scope(), non_empty(oauth2:token()), oauth2:lifetime()},
     begin
-        Response = oauth2_response:new(AccessToken, Expiry, ResourceOwner, Scope, RefreshToken),
+        Response = oauth2_response:new(AccessToken, Expiry, ResourceOwner, Scope, RefreshToken, RefreshExpiry),
         [
          {<<"access_token">>, AccessToken},
          {<<"expires_in">>, Expiry},
          {<<"resource_owner">>, ResourceOwner},
          {<<"scope">>, scope_to_binary(Scope)},
          {<<"refresh_token">>, RefreshToken},
+         {<<"refresh_token_expires_in">>, RefreshExpiry},
          {<<"token_type">>, <<"bearer">>}
         ] =:= oauth2_response:to_proplist(Response)
     end),
@@ -179,16 +181,18 @@ to_proplist_test() ->
 
 -ifndef(pre17).
 to_map_test() ->
-    Property = ?FORALL({AccessToken, RefreshToken, Expiry, ResourceOwner, Scope},
-                       {non_empty(oauth2:token()), non_empty(oauth2:token()), oauth2:lifetime(), binary(), oauth2:scope()},
+    Property = ?FORALL(
+        {AccessToken, Expiry, ResourceOwner, Scope, RefreshToken, RefreshExpiry},
+        {non_empty(oauth2:token()), oauth2:lifetime(), binary(), oauth2:scope(), non_empty(oauth2:token()), oauth2:lifetime()},
     begin
-        Response = oauth2_response:new(AccessToken, Expiry, ResourceOwner, Scope, RefreshToken),
+        Response = oauth2_response:new(AccessToken, Expiry, ResourceOwner, Scope, RefreshToken, RefreshExpiry),
         #{
           <<"access_token">> => AccessToken,
           <<"expires_in">> => Expiry,
           <<"resource_owner">> => ResourceOwner,
           <<"scope">> => scope_to_binary(Scope),
           <<"refresh_token">> => RefreshToken,
+         {<<"refresh_token_expires_in">> => RefreshExpiry},
           <<"token_type">> => <<"bearer">>
         } =:= oauth2_response:to_map(Response)
     end),

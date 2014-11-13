@@ -25,14 +25,16 @@
 -export([new/1]).
 -export([new/2]).
 -export([new/4]).
--export([new/5]).
 -export([new/6]).
+-export([new/7]).
 -export([access_token/1]).
 -export([access_token/2]).
 -export([access_code/1]).
 -export([access_code/2]).
 -export([refresh_token/1]).
 -export([refresh_token/2]).
+-export([refresh_token_expires_in/1]).
+-export([refresh_token_expires_in/2]).
 -export([resource_owner/1]).
 -export([resource_owner/2]).
 -export([expires_in/1]).
@@ -48,8 +50,6 @@
 -export_type([response/0]).
 
 %%%_* Macros ===========================================================
-%% Length of binary data to use for token generation.
--define(TOKEN_LENGTH, 32).
 -define(TOKEN_TYPE, <<"bearer">>).
 
 %%%_ * Types -----------------------------------------------------------
@@ -60,6 +60,7 @@
           ,resource_owner           :: term()
           ,scope                    :: oauth2:scope()
           ,refresh_token            :: oauth2:token()
+          ,refresh_token_expires_in :: oauth2:lifetime()
           ,token_type = ?TOKEN_TYPE :: binary()
          }).
 
@@ -86,17 +87,18 @@ new(AccessToken, ExpiresIn, ResOwner, Scope) ->
              , scope          = Scope
              }.
 
--spec new(token(), lifetime(), term(), scope(), token()) -> response().
-new(AccessToken, ExpiresIn, ResOwner, Scope, RefreshToken) ->
-    #response{ access_token   = AccessToken
-             , expires_in     = ExpiresIn
-             , resource_owner = ResOwner
-             , scope          = Scope
-             , refresh_token  = RefreshToken
+-spec new(token(), lifetime(), term(), scope(), token(), lifetime()) -> response().
+new(AccessToken, ExpiresIn, ResOwner, Scope, RefreshToken, RExpiresIn) ->
+    #response{ access_token             = AccessToken
+             , expires_in               = ExpiresIn
+             , resource_owner           = ResOwner
+             , scope                    = Scope
+             , refresh_token            = RefreshToken
+             , refresh_token_expires_in = RExpiresIn
              }.
 
--spec new(_, lifetime(), term(), scope(), _, token()) -> response().
-new(_, ExpiresIn, ResOwner, Scope, _, AccessCode) ->
+-spec new(_, lifetime(), term(), scope(), _, _, token()) -> response().
+new(_, ExpiresIn, ResOwner, Scope, _, _, AccessCode) ->
     #response{ access_code    = AccessCode
              , expires_in     = ExpiresIn
              , resource_owner = ResOwner
@@ -142,6 +144,16 @@ refresh_token(#response{refresh_token = RefreshToken}) -> {ok, RefreshToken}.
 refresh_token(Response, NewRefreshToken) ->
     Response#response{refresh_token = NewRefreshToken}.
 
+-spec refresh_token_expires_in(response()) -> {ok, token()} | {error, not_set}.
+refresh_token_expires_in(#response{refresh_token = undefined})    ->
+    {error, not_set};
+refresh_token_expires_in(#response{refresh_token_expires_in = RefreshTokenExpiresIn}) ->
+    {ok, RefreshTokenExpiresIn}.
+
+-spec refresh_token_expires_in(response(), token()) -> response().
+refresh_token_expires_in(Response, NewRefreshTokenExpiresIn) ->
+    Response#response{refresh_token_expires_in = NewRefreshTokenExpiresIn}.
+
 -spec resource_owner(response()) -> {ok, term()}.
 resource_owner(#response{resource_owner = ResOwner}) ->
     {ok, ResOwner}.
@@ -179,6 +191,8 @@ response_foldr([], [], _Fun, Acc0) ->
     Acc0;
 response_foldr([_ | Ks], [undefined | Vs], Fun, Acc) ->
     response_foldr(Ks, Vs, Fun, Acc);
+response_foldr([refresh_token_expires_in | Ks], [V | Vs], Fun, Acc) ->
+    Fun(<<"refresh_token_expires_in">>, V, response_foldr(Ks, Vs, Fun, Acc));
 response_foldr([expires_in | Ks], [V | Vs], Fun, Acc) ->
     Fun(<<"expires_in">>, V, response_foldr(Ks, Vs, Fun, Acc));
 response_foldr([K | Ks], [V | Vs], Fun, Acc) ->
