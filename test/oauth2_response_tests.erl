@@ -192,7 +192,7 @@ to_map_test() ->
           <<"resource_owner">> => ResourceOwner,
           <<"scope">> => scope_to_binary(Scope),
           <<"refresh_token">> => RefreshToken,
-         {<<"refresh_token_expires_in">> => RefreshExpiry},
+          <<"refresh_token_expires_in">> => RefreshExpiry,
           <<"token_type">> => <<"bearer">>
         } =:= oauth2_response:to_map(Response)
     end),
