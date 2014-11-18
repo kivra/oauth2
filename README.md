@@ -1,4 +1,4 @@
-# OAuth2 (v0.5.2)  [![BuildStatus](https://travis-ci.org/kivra/oauth2.png?branch=master)](https://travis-ci.org/kivra/oauth2)
+# OAuth2 (v0.6.0)  [![BuildStatus](https://travis-ci.org/kivra/oauth2.png?branch=master)](https://travis-ci.org/kivra/oauth2)
 This library is designed to simplify the implementation of the server side
 of OAuth2 (http://tools.ietf.org/html/rfc6749). It provides
 **no** support for developing clients. See
@@ -7,9 +7,9 @@ accessing Oauth2 enabled services.
 
 oauth2 is released under the terms of the [MIT](http://en.wikipedia.org/wiki/MIT_License) license
 
-Current stable version: [0.5.2](https://github.com/kivra/oauth2/tree/0.5.2)
+Current stable version: [0.6.0](https://github.com/kivra/oauth2/tree/0.6.0)
 
-Current α alpha version: [0.5.x](https://github.com/kivra/oauth2)
+Current α alpha version: [0.6.x](https://github.com/kivra/oauth2)
 
 copyright 2012-2014 Kivra
 
@@ -118,6 +118,9 @@ The following example demonstrates a basic app.config section for oauth2.
         ,{client_credentials, [
             {expiry_time, 86400}
         ]}
+        ,{refresh_token, [
+            {expiry_time, 2592000} %% 30 Days
+        ]}
         ,{code_grant, [
             %% Recommended absolute expiry time from the spec
             {expiry_time, 600}
@@ -133,20 +136,14 @@ To implement a custom token generation backend you can change your
 app.config as such:
 
 ``` erlang
-
-    [
-        {oauth2, [
-            {token_generation, YOUR_TOKEN_GENERATOR}
-        ]}
-    ].
-
+[
+    {oauth2, [
+        {token_generation, YOUR_TOKEN_GENERATOR}
+    ]}
+].
 ```
 
 The default token generator is called oauth2_token. To implement your
 own you should create your own module implementing the
 oauth2_token_generation behavior exporting one function
 generate/0.
-
-## License
-The KIVRA oauth2 library uses an [MIT license](http://en.wikipedia.org/wiki/MIT_License). So go ahead and do what
-you want!
