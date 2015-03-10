@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% Copyright (c) 2012-2013 Kivra
+%%% Copyright (c) 2012-2014 Kivra
 %%%
 %%% Permission to use, copy, modify, and/or distribute this software for any
 %%% purpose with or without fee is hereby granted, provided that the above
@@ -25,17 +25,18 @@
 -type appctx()   :: oauth2:appctx().
 -type token()    :: oauth2:token().
 -type scope()    :: oauth2:scope().
--type client()   :: term().
+-type user()     :: oauth2:user().
+-type client()   :: oauth2:client().
 
 %%%_* Behaviour ========================================================
 %% @doc Authenticates a combination of username and password.
 %%      Returns the resource owner identity if the credentials are valid.
--callback authenticate_username_password(binary(), binary(), appctx()) ->
-                      {ok, {appctx(), term()}} | {error, notfound | badpass}.
+-callback authenticate_user(user(), appctx()) -> {ok, {appctx(), term()}}
+                                               | {error, notfound | badpass}.
 
 %% @doc Authenticates a client's credentials for a given scope.
--callback authenticate_client(binary(), binary(), appctx()) ->
-                    {ok, {appctx(), client()}} | {error, notfound | badsecret}.
+-callback authenticate_client(client(), appctx()) -> {ok, {appctx(), client()}}
+                                                | {error, notfound | badsecret}.
 
 %% @doc Stores a new access code token(), associating it with Context.
 %%      The context is a proplist carrying information about the identity
@@ -82,12 +83,8 @@
 -callback revoke_refresh_token(token(), appctx()) ->
                                           {ok, appctx()} | {error, notfound}.
 
-%% @doc Returns the redirection URI associated with the client ClientId.
--callback get_redirection_uri(binary(), appctx()) ->
-                              {error, notfound} | {ok, {appctx(), binary()}}.
-
 %% @doc Returns a client identity for a given id.
--callback get_client_identity(binary(), appctx()) ->
+-callback get_client_identity(client(), appctx()) ->
                     {ok, {appctx(), client()}} | {error, notfound | badsecret}.
 
 %% @doc Verifies that RedirectionUri is a valid redirection URI for the
@@ -113,6 +110,7 @@
 %%%_* Tests ============================================================
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
+
 -endif.
 
 %%%_* Emacs ============================================================
