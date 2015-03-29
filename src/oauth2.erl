@@ -135,7 +135,7 @@ authorize_client_credentials(Client, Scope0, Ctx0) ->
     case auth_client(Client, no_redir, Ctx0) of
         {error, _}      -> {error, invalid_client};
         {ok, {Ctx1, C}} ->
-            case ?BACKEND:verify_client_scope(Client, Scope0, Ctx1) of
+            case ?BACKEND:verify_client_scope(C, Scope0, Ctx1) of
                 {error, _}           -> {error, invalid_scope};
                 {ok, {Ctx2, Scope1}} ->
                     {ok, {Ctx2, #a{ client=C
