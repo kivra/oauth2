@@ -118,8 +118,8 @@ get_redirection_uri(_, _)                 -> {error, notfound}.
 verify_redirection_uri({client, 4711}, ?CLIENT_URI, Ctx) -> {ok, Ctx};
 verify_redirection_uri(_, _, _)                          -> {error, mismatch}.
 
-verify_client_scope({?CID, ?SECRET}, [], Ctx)      -> {ok, {Ctx, []}};
-verify_client_scope({?CID, ?SECRET}, ?CSCOPE, Ctx) -> {ok, {Ctx, ?CSCOPE}};
+verify_client_scope({client, 4711}, [], Ctx)      -> {ok, {Ctx, []}};
+verify_client_scope({client, 4711}, ?CSCOPE, Ctx) -> {ok, {Ctx, ?CSCOPE}};
 verify_client_scope(_, _, _)                       -> {error, invalid_scope}.
 
 verify_resowner_scope({user, 31337}, ?USCOPE, Ctx) -> {ok, {Ctx, ?USCOPE}};
