@@ -171,7 +171,7 @@ to_proplist(Response) ->
     response_foldr(Response, fun(Key, Value, Acc) -> [{Key, Value} | Acc] end, []).
 
 -ifndef(pre17).
--spec to_map(response()) -> map(binary(), any()).
+-spec to_map(response()) -> map().
 to_map(Response) ->
     response_foldr(Response, fun(Key, Value, Acc) -> maps:put(Key, Value, Acc) end, maps:new()).
 -endif.
