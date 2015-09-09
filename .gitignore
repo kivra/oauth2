@@ -1,3 +1,5 @@
 ebin
 .eunit
 deps
+.rebar
+*.plt
