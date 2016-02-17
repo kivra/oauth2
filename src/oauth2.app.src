@@ -27,6 +27,7 @@
                   stdlib
                  ]},
   {env, []},
+  {pkg_name, "oauth2_erlang"},
   {maintainers, ["kivra", "Heinz N. Gies"]},
   {licenses,["MIT"]},
   {links,[{"Github",
