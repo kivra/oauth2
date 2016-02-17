@@ -26,5 +26,9 @@
                   kernel,
                   stdlib
                  ]},
-  {env, []}
+  {env, []},
+  {maintainers, ["kivra", "Heinz N. Gies"]},
+  {licenses,["MIT"]},
+  {links,[{"Github",
+           "https://github.com/kivra/oauth2"}]}
  ]}.
