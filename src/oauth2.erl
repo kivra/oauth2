@@ -117,13 +117,17 @@ authorize_password(User, Client, Scope, Ctx0) ->
 -spec authorize_password(user(), client(), rediruri(), scope(), appctx())
                             -> {ok, {appctx(), auth()}} | {error, error()}.
 authorize_password(User, Client, RedirUri, Scope, Ctx0) ->
-    case auth_client(Client, RedirUri, Ctx0) of
-        {error, _}      -> {error, invalid_client};
-        {ok, {Ctx1, C}} ->
-            case auth_user(User, Scope, Ctx1) of
+    case ?BACKEND:get_client_identity(Client,Ctx0) of
+      {error, _}   ->{error, invalid_client};
+      {ok,{Ctx1,C}} ->
+        case ?BACKEND:verify_redirection_uri(C, RedirUri, Ctx1) of
+          {error, _}      -> {error, invalid_client};
+          {ok, Ctx2} ->
+            case auth_user(User, Scope, Ctx2) of
                 {error, _} = E     -> E;
-                {ok, {Ctx2, Auth}} -> {ok, {Ctx2, Auth#a{client=C}}}
+                {ok, {Ctx3, Auth}} -> {ok, {Ctx3, Auth#a{client=C}}}
             end
+        end
     end.
 
 %% @doc Validates a request for an access token from client's credentials.

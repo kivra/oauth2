@@ -111,7 +111,7 @@ authorize_implicit_grant_test_() ->
               fun() ->
                       {ok, {foo_context, Auth}} =
                           oauth2:authorize_password( {?USER_NAME,?USER_PASSWORD}
-                                                   , {?CLIENT_ID,?CLIENT_SECRET}
+                                                   , ?CLIENT_ID
                                                    , ?CLIENT_URI
                                                    , ?USER_SCOPE
                                                    , foo_context),
