@@ -246,10 +246,10 @@ issue_token_and_refresh(#a{resowner = undefined}, _Ctx) ->
 issue_token_and_refresh( #a{client=Client, resowner=Owner, scope=Scope, ttl=TTL}
                        , Ctx0 ) ->
     RTTL         = oauth2_config:expiry_time(refresh_token),
-    AccessCtx    = build_context(Client,seconds_since_epoch(TTL),Owner,Scope),
     RefreshCtx   = build_context(Client,seconds_since_epoch(RTTL),Owner,Scope),
-    AccessToken  = ?TOKEN:generate(AccessCtx),
     RefreshToken = ?TOKEN:generate(RefreshCtx),
+    AccessCtx    = build_context(Client,seconds_since_epoch(TTL),Owner,Scope,RefreshToken),
+    AccessToken  = ?TOKEN:generate(AccessCtx),
     {ok, Ctx1}   = ?BACKEND:associate_access_token( AccessToken
                                                   , AccessCtx
                                                   , Ctx0),
@@ -384,6 +384,9 @@ build_context(Client, ExpiryTime, ResOwner, Scope) ->
     , {<<"resource_owner">>, ResOwner}
     , {<<"expiry_time">>,    ExpiryTime}
     , {<<"scope">>,          Scope} ].
+
+build_context(Client, ExpiryTime, ResOwner, Scope, RefreshToken) ->
+  [{<<"refresh_token">>, RefreshToken} | build_context(Client, ExpiryTime, ResOwner, Scope)].
 
 -spec seconds_since_epoch(integer()) -> non_neg_integer().
 seconds_since_epoch(Diff) ->
