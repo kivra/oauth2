@@ -58,6 +58,7 @@
 %% Opaque authentication record
 -record(a, { client   = undefined    :: undefined | term()
            , resowner = undefined    :: undefined | term()
+           , code     = undefined    :: undefined | token()
            , scope                   :: scope()
            , ttl      = 0            :: non_neg_integer()
            }).
@@ -166,6 +167,7 @@ authorize_code_grant(Client, Code, RedirUri, Ctx0) ->
                     {ok, Ctx3} = ?BACKEND:revoke_access_code(Code, Ctx2),
                     {ok, {Ctx3, #a{ client  =C
                                   , resowner=get_(GrantCtx,<<"resource_owner">>)
+                                  , code    =Code
                                   , scope   =get_(GrantCtx, <<"scope">>)
                                   , ttl     =oauth2_config:expiry_time(
                                                       password_credentials)
@@ -222,8 +224,11 @@ issue_code(#a{client=Client, resowner=Owner, scope=Scope, ttl=TTL}, Ctx0) ->
 %%      - 4.4.3. Client Credentials Grant > Access Token Response, with the
 %%        result of authorize_client_credentials/4.
 -spec issue_token(auth(), appctx()) -> {ok, {appctx(), response()}}.
-issue_token(#a{client=Client, resowner=Owner, scope=Scope, ttl=TTL}, Ctx0) ->
-    GrantContext = build_context(Client,seconds_since_epoch(TTL),Owner,Scope),
+issue_token(#a{client=Client, resowner=Owner, code=Code, scope=Scope, ttl=TTL},
+            Ctx0) ->
+  GrantContext = add_more_context(
+               [{code, Code}],
+               build_context(Client, seconds_since_epoch(TTL), Owner, Scope)),
     AccessToken  = ?TOKEN:generate(GrantContext),
     {ok, Ctx1}   = ?BACKEND:associate_access_token( AccessToken
                                                   , GrantContext
@@ -243,12 +248,14 @@ issue_token_and_refresh(#a{client = undefined}, _Ctx)   ->
   {error, invalid_authorization};
 issue_token_and_refresh(#a{resowner = undefined}, _Ctx) ->
   {error, invalid_authorization};
-issue_token_and_refresh( #a{client=Client, resowner=Owner, scope=Scope, ttl=TTL}
-                       , Ctx0 ) ->
+issue_token_and_refresh( #a{client=Client, resowner=Owner, code=Code,
+                            scope=Scope, ttl=TTL}, Ctx0 ) ->
     RTTL         = oauth2_config:expiry_time(refresh_token),
     RefreshCtx   = build_context(Client,seconds_since_epoch(RTTL),Owner,Scope),
     RefreshToken = ?TOKEN:generate(RefreshCtx),
-    AccessCtx    = build_context(Client,seconds_since_epoch(TTL),Owner,Scope,RefreshToken),
+    AccessCtx    = add_more_context(
+         [{refresh_token, RefreshToken}, {code, Code}],
+         build_context(Client, seconds_since_epoch(TTL), Owner, Scope)),
     AccessToken  = ?TOKEN:generate(AccessCtx),
     {ok, Ctx1}   = ?BACKEND:associate_access_token( AccessToken
                                                   , AccessCtx
@@ -385,8 +392,13 @@ build_context(Client, ExpiryTime, ResOwner, Scope) ->
     , {<<"expiry_time">>,    ExpiryTime}
     , {<<"scope">>,          Scope} ].
 
-build_context(Client, ExpiryTime, ResOwner, Scope, RefreshToken) ->
-  [{<<"refresh_token">>, RefreshToken} | build_context(Client, ExpiryTime, ResOwner, Scope)].
+-spec add_more_context(list({atom(), term()}), context()) -> context().
+add_more_context([], Context) -> Context;
+add_more_context([{refresh_token, RefreshToken} | Rest], Context) ->
+  add_more_context(Rest, [{<<"refresh_token">>, RefreshToken} | Context]);
+add_more_context([{code, Code} | Rest], Context) ->
+  add_more_context(Rest, [{<<"code">>, Code} | Context]);
+add_more_context([_ | Rest], Context) -> add_more_context(Rest, Context).
 
 -spec seconds_since_epoch(integer()) -> non_neg_integer().
 seconds_since_epoch(Diff) ->
