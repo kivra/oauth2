@@ -27,10 +27,11 @@
 -export([generate/1]).
 
 %%% Exported for testability
--export([strong_rand_bytes_proxy/1]).
+-export([strong_rand_bytes_proxy/1, rand_seed/0]).
 
 %%%_* Macros ===========================================================
 -define(TOKEN_LENGTH, 32).
+-define(RANDOM_RETRIES, 10).
 
 %%%_* Code =============================================================
 %%%_ * API -------------------------------------------------------------
@@ -42,7 +43,7 @@ generate(_Context) -> generate_fragment(?TOKEN_LENGTH).
 -spec generate_fragment(integer()) -> binary().
 generate_fragment(0) -> <<>>;
 generate_fragment(N) ->
-    Rand = base64:encode(rand_bytes(N)),
+    Rand = base64:encode(rand_bytes(N, ?RANDOM_RETRIES)),
     Frag = << <<C>> || <<C>> <= <<Rand:N/bytes>>, is_alphanum(C) >>,
     <<Frag/binary, (generate_fragment(N - byte_size(Frag)))/binary>>.
 
@@ -56,8 +57,9 @@ is_alphanum(_)                                    -> false.
 %% @doc Generate N random bytes, using the crypto:strong_rand_bytes
 %%      function if sufficient entropy exists. If not, use crypto:rand_bytes
 %%      as a fallback.
--spec rand_bytes(non_neg_integer()) -> binary().
-rand_bytes(N) ->
+-spec rand_bytes(non_neg_integer(), non_neg_integer()) -> binary().
+rand_bytes(_, 0) -> throw(low_entropy);
+rand_bytes(N, Retries) when Retries > 0 ->
     try
         %% NOTE: Apparently we can't meck away the crypto module,
         %% so we install this proxy to allow for testing the low_entropy
@@ -65,12 +67,29 @@ rand_bytes(N) ->
         ?MODULE:strong_rand_bytes_proxy(N)
     catch
         throw:low_entropy ->
-            crypto:rand_bytes(N)
+          % set a new seed
+          rand_seed(),
+          % try again
+          rand_bytes(N, Retries - 1)
     end.
 
 %% @equiv crypto:strong_rand_bytes(N)
 -spec strong_rand_bytes_proxy(non_neg_integer()) -> binary().
 strong_rand_bytes_proxy(N) -> crypto:strong_rand_bytes(N).
+
+-spec rand_seed() -> ok.
+rand_seed() ->
+  try
+    Time = erlang:monotonic_time(),
+    UMI = erlang:unique_integer([monotonic]),
+    crypto:rand_seed(term_to_binary({Time, UMI}))
+  catch
+    error:undef ->
+      % fallback for OTP < 18
+      {_, _, Before} = os:timestamp(),
+      {_, _, After} = os:timestamp(),
+      timer:sleep(round(math:pow(After - Before, 2)) rem 1024)
+  end.
 
 %%%_* Tests ============================================================
 -ifdef(TEST).

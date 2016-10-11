@@ -43,6 +43,9 @@ generate_test() ->
     ?assertEqual(byte_size(Token), 32),
     ?assert(lists:all(fun is_alphanum/1, binary_to_list(Token))).
 
+rand_seed_test() ->
+    ?assertEqual(ok, oauth2_token:rand_seed()).
+
 generate_low_entropy_test_() ->
     {setup,
      fun() ->
@@ -55,10 +58,9 @@ generate_low_entropy_test_() ->
      end,
      fun(_) ->
              [
-              ?_assertEqual(byte_size(oauth2_token:generate([])), 32),
-              ?_assert(
-                 lists:all(fun is_alphanum/1,
-                           binary_to_list(oauth2_token:generate([]))))
+              % I check that the function retry all N times and fail in
+              % the end throwing the exception.
+              ?_assertException(throw, low_entropy, oauth2_token:generate([]))
              ]
      end}.
 
