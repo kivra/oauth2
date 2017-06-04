@@ -321,11 +321,18 @@ refresh_access_token(Client, RefreshToken, Scope, Ctx0) ->
                                                         , <<"resource_owner">> ),
                                     TTL = oauth2_config:expiry_time(
                                             password_credentials),
-                                    issue_token(#a{ client   = C
-                                                  , resowner = ResOwner
-                                                  , scope    = VerScope
-                                                  , ttl      = TTL
-                                                  }, Ctx3)
+                                    Auth = #a{ client   = C
+                                             , resowner = ResOwner
+                                             , scope    = VerScope
+                                             , ttl      = TTL},
+                                    case oauth2_config:always_issue_new_refresh_token() of
+                                      true ->
+                                        {ok, Ctx4} =
+                                          ?BACKEND:revoke_refresh_token(RefreshToken, Ctx3),
+                                        issue_token_and_refresh(Auth, Ctx4);
+                                      false ->
+                                        issue_token(Auth, Ctx3)
+                                    end
                             end;
                         false ->
                             ?BACKEND:revoke_refresh_token(RefreshToken, Ctx2),
