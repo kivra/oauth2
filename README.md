@@ -1,4 +1,4 @@
-# OAuth2 (v0.6.1)  [![BuildStatus](https://travis-ci.org/kivra/oauth2.png?branch=master)](https://travis-ci.org/kivra/oauth2)
+# OAuth2 (v0.7.0)  [![BuildStatus](https://travis-ci.org/kivra/oauth2.png?branch=master)](https://travis-ci.org/kivra/oauth2)
 This library is designed to simplify the implementation of the server side
 of OAuth2 (http://tools.ietf.org/html/rfc6749). It provides
 **no** support for developing clients. See
