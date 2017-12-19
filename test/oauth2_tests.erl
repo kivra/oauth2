@@ -59,12 +59,12 @@ bad_authorize_password_test_() ->
                                  {<<"herp">>, <<"derp">>},
                                  <<"bad_scope">>,
                                  foo_context)),
-                 ?_assertMatch({error, access_denied},
+                 ?_assertMatch({error, badpass},
                                oauth2:authorize_password(
                                  {<<"herp">>, <<"herp">>},
                                  <<"xyz">>,
                                  foo_context)),
-                 ?_assertMatch({error, access_denied},
+                 ?_assertMatch({error, notfound},
                                oauth2:authorize_password(
                                  {<<"derp">>,<<"derp">>},
                                  <<"xyz">>,
@@ -81,7 +81,7 @@ bad_authorize_password_test_() ->
                                  {?CLIENT_ID, ?CLIENT_SECRET},
                                  <<"bad_scope">>,
                                  foo_context)),
-                 ?_assertMatch({error, access_denied},
+                 ?_assertMatch({error, badpass},
                                oauth2:authorize_password(
                                  {<<"herp">>, <<"herp">>},
                                  {?CLIENT_ID, ?CLIENT_SECRET},
@@ -247,7 +247,7 @@ bad_access_code_test_() ->
                                          ?CLIENT_URI,
                                          <<"bad_scope">>,
                                          foo_context),
-                      {error, access_denied} = oauth2:authorize_code_request(
+                      {error, badpass} = oauth2:authorize_code_request(
                                          {<<"herp">>, <<"herp">>},
                                          ?CLIENT_ID,
                                          ?CLIENT_URI,

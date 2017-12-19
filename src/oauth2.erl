@@ -353,7 +353,7 @@ verify_access_token(AccessToken, Ctx0) ->
 %%%_* Private functions ================================================
 auth_user(User, Scope0, Ctx0) ->
     case ?BACKEND:authenticate_user(User, Ctx0) of
-        {error, _}          -> {error, access_denied};
+        {error, _}=E        -> E;
         {ok, {Ctx1, Owner}} ->
             case ?BACKEND:verify_resowner_scope(Owner, Scope0, Ctx1) of
                 {error, _}           -> {error, invalid_scope};
