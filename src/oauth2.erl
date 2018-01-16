@@ -76,7 +76,7 @@
                     invalid_request | invalid_authorization | invalid_scope |
                     unauthorized_client | unsupported_grant_type |
                     unsupported_response_type | server_error |
-                    temporarily_unavailable.
+                    temporarily_unavailable | atom().
 
 %%%_* Code =============================================================
 %%%_ * API -------------------------------------------------------------

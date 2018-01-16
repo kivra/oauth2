@@ -32,7 +32,7 @@
 %% @doc Authenticates a combination of username and password.
 %%      Returns the resource owner identity if the credentials are valid.
 -callback authenticate_user(user(), appctx()) -> {ok, {appctx(), term()}}
-                                               | {error, notfound | badpass}.
+                                               | {error, atom()}.
 
 %% @doc Authenticates a client's credentials for a given scope.
 -callback authenticate_client(client(), appctx()) -> {ok, {appctx(), client()}}
