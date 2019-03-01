@@ -43,25 +43,6 @@ generate_test() ->
     ?assertEqual(byte_size(Token), 32),
     ?assert(lists:all(fun is_alphanum/1, binary_to_list(Token))).
 
-generate_low_entropy_test_() ->
-    {setup,
-     fun() ->
-             meck:new(oauth2_token, [passthrough]),
-             meck:expect(oauth2_token, strong_rand_bytes_proxy,
-                         fun(_) -> throw(low_entropy) end)
-     end,
-     fun(_) ->
-             meck:unload(oauth2_token)
-     end,
-     fun(_) ->
-             [
-              ?_assertEqual(byte_size(oauth2_token:generate([])), 32),
-              ?_assert(
-                 lists:all(fun is_alphanum/1,
-                           binary_to_list(oauth2_token:generate([]))))
-             ]
-     end}.
-
 %%%===================================================================
 %%% Utility functions
 %%%===================================================================

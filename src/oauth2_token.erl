@@ -26,9 +26,6 @@
 %%%_ * API -------------------------------------------------------------
 -export([generate/1]).
 
-%%% Exported for testability
--export([strong_rand_bytes_proxy/1]).
-
 %%%_* Macros ===========================================================
 -define(TOKEN_LENGTH, 32).
 
@@ -42,7 +39,7 @@ generate(_Context) -> generate_fragment(?TOKEN_LENGTH).
 -spec generate_fragment(integer()) -> binary().
 generate_fragment(0) -> <<>>;
 generate_fragment(N) ->
-    Rand = base64:encode(rand_bytes(N)),
+    Rand = base64:encode(crypto:strong_rand_bytes(N)),
     Frag = << <<C>> || <<C>> <= <<Rand:N/bytes>>, is_alphanum(C) >>,
     <<Frag/binary, (generate_fragment(N - byte_size(Frag)))/binary>>.
 
@@ -52,25 +49,6 @@ is_alphanum(C) when C >= 16#30 andalso C =< 16#39 -> true;
 is_alphanum(C) when C >= 16#41 andalso C =< 16#5A -> true;
 is_alphanum(C) when C >= 16#61 andalso C =< 16#7A -> true;
 is_alphanum(_)                                    -> false.
-
-%% @doc Generate N random bytes, using the crypto:strong_rand_bytes
-%%      function if sufficient entropy exists. If not, use crypto:rand_bytes
-%%      as a fallback.
--spec rand_bytes(non_neg_integer()) -> binary().
-rand_bytes(N) ->
-    try
-        %% NOTE: Apparently we can't meck away the crypto module,
-        %% so we install this proxy to allow for testing the low_entropy
-        %% situation.
-        ?MODULE:strong_rand_bytes_proxy(N)
-    catch
-        throw:low_entropy ->
-            crypto:rand_bytes(N)
-    end.
-
-%% @equiv crypto:strong_rand_bytes(N)
--spec strong_rand_bytes_proxy(non_neg_integer()) -> binary().
-strong_rand_bytes_proxy(N) -> crypto:strong_rand_bytes(N).
 
 %%%_* Tests ============================================================
 -ifdef(TEST).
