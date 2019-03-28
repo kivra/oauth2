@@ -26,6 +26,7 @@
 -export([expiry_time/0]).
 -export([expiry_time/1]).
 -export([token_generation/0]).
+-export([always_issue_new_refresh_token/0]).
 
 %%%_* Macros ===========================================================
 %% Default time in seconds before an authentication token expires.
@@ -57,6 +58,18 @@ backend() -> get_required(backend).
 %% @doc Gets the backend for generating tokens.
 -spec token_generation() -> atom().
 token_generation() -> get_optional(token_generation, oauth2_token).
+
+%% @doc Gets if the refresh_token should be refreshed.
+-spec always_issue_new_refresh_token() -> boolean().
+always_issue_new_refresh_token() ->
+    case application:get_env(oauth2, refresh_token) of
+        undefined   -> false;
+        {ok, Value} ->
+            case lists:keyfind(always_issue_new_refresh_token, 1, Value) of
+                false       -> false;
+                {_Key, Val} -> Val
+            end
+    end.
 
 %%%_* Private functions ================================================
 get_optional(Key, Default) ->
