@@ -34,11 +34,14 @@
 -export([authorize_code_request/5]).
 -export([issue_code/2]).
 -export([issue_token/2]).
+-export([issue_jwt/2]).
 -export([issue_token_and_refresh/2]).
+-export([issue_jwt_and_refresh/2]).
 -export([verify_access_token/2]).
 -export([verify_access_code/2]).
 -export([verify_access_code/3]).
 -export([refresh_access_token/4]).
+-export([refresh_jwt/4]).
 
 -export_type([token/0]).
 -export_type([user/0]).
@@ -60,6 +63,7 @@
            , resowner = undefined    :: undefined | term()
            , scope                   :: scope()
            , ttl      = 0            :: non_neg_integer()
+           , issuer   = <<"Kivra">>  :: binary()
            }).
 
 -type context()  :: proplists:proplist().
@@ -230,6 +234,22 @@ issue_token(#a{client=Client, resowner=Owner, scope=Scope, ttl=TTL}, Ctx0) ->
                                                   , Ctx0 ),
     {ok, {Ctx1, oauth2_response:new(AccessToken, TTL, Owner, Scope)}}.
 
+%% @doc Issues an JWT without refresh token from an authorization.
+-spec issue_jwt(auth(), appctx()) -> {ok, response()}.
+issue_jwt(#a{ client   = Client
+            , resowner = ResOwner
+            , scope    = Scope
+            , ttl      = TTL
+            , issuer   = Issuer}, Ctx) ->
+    ExpiryTime = seconds_since_epoch(TTL),
+    IssuedAt   = seconds_since_epoch(0),
+    AccessCtx  = build_jwt_context( Issuer, ResOwner, ExpiryTime, IssuedAt
+                                  , Client, Scope),
+    % jwt_sign() will add security_score and normalize_scope_to_list(Scope)
+    % before signing the access context
+    {ok, JWT}  = ?BACKEND:jwt_sign(AccessCtx, Ctx),
+    {ok, {Ctx, AccessCtx, oauth2_response:new(JWT, TTL)}}.
+
 %% @doc Issues access and refresh tokens from an authorization.
 %%      Use it to implement the following steps of RFC 6749:
 %%      - 4.1.4. Authorization Code Grant > Access Token Response, with the
@@ -262,6 +282,37 @@ issue_token_and_refresh( #a{client=Client, resowner=Owner, scope=Scope, ttl=TTL}
                                    , Scope
                                    , RefreshToken
                                    , RTTL )}}.
+
+%% @doc Issues JWT and refresh token from an authorization.
+-spec issue_jwt_and_refresh(auth(), appctx()) -> {ok, {appctx(), response()}}
+                                               | {error, invalid_authorization}.
+issue_jwt_and_refresh(#a{client = undefined}, _Ctx)   ->
+    {error, invalid_authorization};
+issue_jwt_and_refresh(#a{resowner = undefined}, _Ctx) ->
+    {error, invalid_authorization};
+issue_jwt_and_refresh( #a{ client   = Client
+                         , resowner = ResOwner
+                         , scope    = Scope
+                         , ttl      = TTL
+                         , issuer   = Issuer}, Ctx0) ->
+    % access_token
+    AccessExpiry  = seconds_since_epoch(TTL),
+    IssuedAt      = seconds_since_epoch(0),
+    AccessCtx     = build_jwt_context( Issuer, ResOwner, AccessExpiry, IssuedAt
+                                     , Client, Scope),
+    {ok, JWT}     = ?BACKEND:jwt_sign(AccessCtx, Ctx0),
+
+    % refresh_token
+    RefreshTTL    = oauth2_config:expiry_time(jwt_refresh_token),
+    RefreshExpiry = case RefreshTTL of
+                      no_expiry -> undefined;
+                      _         -> seconds_since_epoch(RefreshTTL)
+                    end,
+    RefreshCtx    = build_context(Client, RefreshExpiry, ResOwner, Scope),
+    RefreshToken  = ?TOKEN:generate(RefreshCtx),
+    {ok, Ctx1}    = ?BACKEND:associate_refresh_token( RefreshToken
+                                                    , RefreshCtx, Ctx0),
+    {ok, {Ctx1, AccessCtx, oauth2_response:new(JWT, TTL, RefreshToken)}}.
 
 %% @doc Verifies an access code AccessCode, returning its associated
 %%      context if successful. Otherwise, an OAuth2 error code is returned.
@@ -301,37 +352,42 @@ verify_access_code(AccessCode, Client, Ctx0) ->
 -spec refresh_access_token(client(), token(), scope(), appctx())
                             -> {ok, {appctx(), response()}} | {error, error()}.
 refresh_access_token(Client, RefreshToken, Scope, Ctx0) ->
-    case auth_client(Client, no_redir, Ctx0) of
-        {error, _}      -> {error, invalid_client};
-        {ok, {Ctx1, C}} ->
-            case ?BACKEND:resolve_refresh_token(RefreshToken, Ctx1) of
-                {error, _}             -> {error, invalid_grant};
-                {ok, {Ctx2, GrantCtx}} ->
-                    {ok, ExpiryAbsolute} = get(GrantCtx, <<"expiry_time">>),
-                    case ExpiryAbsolute > seconds_since_epoch(0) of
-                        true ->
-                            {ok, C}        = get(GrantCtx, <<"client">>),
-                            {ok, RegScope} = get(GrantCtx, <<"scope">>),
-                            case ?BACKEND:verify_scope( RegScope
-                                                      , Scope
-                                                      , Ctx2) of
-                                {error, _}             -> {error, invalid_scope};
-                                {ok, {Ctx3, VerScope}} ->
-                                    {ok, ResOwner} = get( GrantCtx
-                                                        , <<"resource_owner">> ),
-                                    TTL = oauth2_config:expiry_time(
-                                            password_credentials),
-                                    issue_token(#a{ client   = C
-                                                  , resowner = ResOwner
-                                                  , scope    = VerScope
-                                                  , ttl      = TTL
-                                                  }, Ctx3)
-                            end;
-                        false ->
-                            ?BACKEND:revoke_refresh_token(RefreshToken, Ctx2),
-                            {error, invalid_grant}
-                    end
-            end
+    case verify_refresh_token_basic(Client, RefreshToken, Scope, Ctx0) of
+      {ok, {Ctx1, ClientId, ResOwner, VerifiedScope, TTL}} ->
+          issue_token(#a{ client   = ClientId
+                        , resowner = ResOwner
+                        , scope    = VerifiedScope
+                        , ttl      = TTL
+                        }, Ctx1);
+      {error, _} = E -> E
+    end.
+
+%% @doc Validates a request for a JWT from a refresh token, issuing a new JWT
+%%      if valid.
+-spec refresh_jwt(client(), token(), scope(), appctx())
+                            -> {ok, {appctx(), response()}} | {error, error()}.
+refresh_jwt(Client, RefreshToken, Scope, Ctx0) ->
+    case verify_refresh_token_basic(Client, RefreshToken, Scope, Ctx0) of
+        {ok, {Ctx1, ClientId, ResOwner, VerifiedScope, TTL}} ->
+            % RFC 6749 Section 10.4 (Security Considerations for refresh_token)
+            %
+            % Authorization server could employ refresh token rotation in which
+            % a new refresh token is issued with every access token refresh
+            % response.  The previous refresh token is invalidated but retained
+            % by the authorization server.  If a refresh token is compromised
+            % and subsequently used by both the attacker and the legitimate
+            % client, one of them will present an invalidated refresh token,
+            % which will inform the authorization server of the breach.
+            %
+            % TODO: implement this
+            ?BACKEND:revoke_refresh_token(RefreshToken, Ctx1),
+            issue_jwt_and_refresh(#a{ client   = ClientId
+                                    , resowner = ResOwner
+                                    , scope    = VerifiedScope
+                                    , ttl      = TTL
+                                    , issuer   = ?BACKEND:jwt_issuer()
+                                    }, Ctx1);
+        {error, _} = E -> E
     end.
 
 %% @doc Verifies an access token AccessToken, returning its associated
@@ -362,6 +418,7 @@ auth_user(User, Scope0, Ctx0) ->
                                   , scope    = Scope1
                                   , ttl      = oauth2_config:expiry_time(
                                                          password_credentials)
+                                  , issuer   = ?BACKEND:jwt_issuer()
                                   }}}
             end
     end.
@@ -378,6 +435,34 @@ auth_client(Client, RedirUri, Ctx0) ->
             end
     end.
 
+verify_refresh_token_basic(Client, RefreshToken, Scope, Ctx0) ->
+    case auth_client(Client, no_redir, Ctx0) of
+        {error, _}             -> {error, invalid_client};
+        {ok, {Ctx1, ClientId}} ->
+            case ?BACKEND:resolve_refresh_token(RefreshToken, Ctx1) of
+                {error, _}             -> {error, invalid_grant};
+                {ok, {Ctx2, GrantCtx}} ->
+                    {ok, ExpiryAbsolute} = get(GrantCtx, <<"expiry_time">>),
+                    case ExpiryAbsolute > seconds_since_epoch(0) of
+                        true ->
+                            {ok, RegScope} = get(GrantCtx, <<"scope">>),
+                            case ?BACKEND:verify_scope(RegScope, Scope, Ctx2) of
+                                {error, _}                  ->
+                                    {error, invalid_scope};
+                                {ok, {Ctx3, VerifiedScope}} ->
+                                    {ok, ClientId} = get(GrantCtx, <<"client">>),
+                                    {ok, ResOwner} = get(GrantCtx, <<"resource_owner">>),
+                                    TTL            = oauth2_config:expiry_time(
+                                                       password_credentials),
+                                    {ok, {Ctx3, ClientId, ResOwner, VerifiedScope, TTL}}
+                            end;
+                        false ->
+                            ?BACKEND:revoke_refresh_token(RefreshToken, Ctx2),
+                            {error, invalid_grant}
+                    end
+            end
+    end.
+
 -spec build_context(term(), non_neg_integer(), term(), scope()) -> context().
 build_context(Client, ExpiryTime, ResOwner, Scope) ->
     [ {<<"client">>,         Client}
@@ -387,6 +472,15 @@ build_context(Client, ExpiryTime, ResOwner, Scope) ->
 
 build_context(Client, ExpiryTime, ResOwner, Scope, RefreshToken) ->
   [{<<"refresh_token">>, RefreshToken} | build_context(Client, ExpiryTime, ResOwner, Scope)].
+
+build_jwt_context(Issuer, ResOwner, ExpiryTime, IssuedAt, Client, Scope) ->
+    [ {<<"iss">>,    Issuer}
+    , {<<"sub">>,    ResOwner}
+    , {<<"exp">>,    ExpiryTime}
+    , {<<"iat">>,    IssuedAt}
+    , {<<"client">>, Client}
+    , {<<"scope">>,  Scope}
+    ].
 
 -spec seconds_since_epoch(integer()) -> non_neg_integer().
 seconds_since_epoch(Diff) ->

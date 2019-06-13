@@ -107,6 +107,13 @@
 -callback verify_scope(scope(), scope(), appctx()) ->
                     {ok, {appctx(), scope()}} | {error, notfound | badscope}.
 
+%% @doc Sign the grant context with a private key and produce a JWT.
+%%      The grant context is a proplist carrying information about the identity
+%%      with which the token is associated, when it expires, etc.
+-callback jwt_sign(grantctx(), appctx()) -> {ok, token()}.
+
+-callback jwt_issuer() -> binary().
+
 %%%_* Tests ============================================================
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").

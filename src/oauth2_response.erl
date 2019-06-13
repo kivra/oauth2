@@ -24,6 +24,7 @@
 %%%_ * API -------------------------------------------------------------
 -export([new/1]).
 -export([new/2]).
+-export([new/3]).
 -export([new/4]).
 -export([new/6]).
 -export([new/7]).
@@ -78,6 +79,12 @@ new(AccessToken) ->
 -spec new(token(), lifetime()) -> response().
 new(AccessToken, ExpiresIn) ->
     #response{access_token = AccessToken, expires_in = ExpiresIn}.
+
+new(AccessToken, ExpiresIn, RefreshToken) ->
+    #response{ access_token             = AccessToken
+             , expires_in               = ExpiresIn
+             , refresh_token            = RefreshToken
+             }.
 
 -spec new(token(), lifetime(), term(), scope()) -> response().
 new(AccessToken, ExpiresIn, ResOwner, Scope) ->
