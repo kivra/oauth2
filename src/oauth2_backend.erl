@@ -112,6 +112,11 @@
 %%      with which the token is associated, when it expires, etc.
 -callback jwt_sign(grantctx(), appctx()) -> {ok, token()}.
 
+%% @doc Verifies a JWT, returning the corresponding grant context if
+%%      verification succeeds.
+-callback jwt_verify(token()) -> {ok, grantctx()} | {error, badjwt}.
+
+%% @doc A case-sensitive string or URI that uniquely identifies the issuer.
 -callback jwt_issuer() -> binary().
 
 %%%_* Tests ============================================================

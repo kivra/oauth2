@@ -40,6 +40,7 @@
 -export([verify_access_token/2]).
 -export([verify_access_code/2]).
 -export([verify_access_code/3]).
+-export([verify_jwt/1]).
 -export([refresh_access_token/4]).
 -export([refresh_jwt/4]).
 
@@ -403,6 +404,19 @@ verify_access_token(AccessToken, Ctx0) ->
                 false ->
                     ?BACKEND:revoke_access_token(AccessToken, Ctx1),
                     {error, access_denied}
+            end
+    end.
+
+%% @doc Verifies a JWT, returning its associated context if successful.
+%%      Otherwise, an OAuth2 error code is returned.
+-spec verify_jwt(token()) -> {ok, context()} | {error, error()}.
+verify_jwt(JWT) ->
+    case ?BACKEND:jwt_verify(JWT) of
+        {error, _}     -> {error, access_denied};
+        {ok, GrantCtx} ->
+            case get_(GrantCtx, <<"exp">>) > seconds_since_epoch(0) of
+                true  -> {ok, GrantCtx};
+                false -> {error, access_denied}
             end
     end.
 
