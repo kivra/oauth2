@@ -305,10 +305,7 @@ issue_jwt_and_refresh( #a{ client   = Client
 
     % refresh_token
     RefreshTTL    = oauth2_config:expiry_time(jwt_refresh_token),
-    RefreshExpiry = case RefreshTTL of
-                      no_expiry -> undefined;
-                      _         -> seconds_since_epoch(RefreshTTL)
-                    end,
+    RefreshExpiry = seconds_since_epoch(RefreshTTL),
     RefreshCtx    = build_context(Client, RefreshExpiry, ResOwner, Scope),
     RefreshToken  = ?TOKEN:generate(RefreshCtx),
     {ok, Ctx1}    = ?BACKEND:associate_refresh_token( RefreshToken
