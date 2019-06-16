@@ -236,7 +236,7 @@ issue_token(#a{client=Client, resowner=Owner, scope=Scope, ttl=TTL}, Ctx0) ->
     {ok, {Ctx1, oauth2_response:new(AccessToken, TTL, Owner, Scope)}}.
 
 %% @doc Issues an JWT without refresh token from an authorization.
--spec issue_jwt(auth(), appctx()) -> {ok, response()}.
+-spec issue_jwt(auth(), appctx()) -> {ok, context(), response()}.
 issue_jwt(#a{ client   = Client
             , resowner = ResOwner
             , scope    = Scope
@@ -285,8 +285,9 @@ issue_token_and_refresh( #a{client=Client, resowner=Owner, scope=Scope, ttl=TTL}
                                    , RTTL )}}.
 
 %% @doc Issues JWT and refresh token from an authorization.
--spec issue_jwt_and_refresh(auth(), appctx()) -> {ok, {appctx(), response()}}
-                                               | {error, invalid_authorization}.
+-spec issue_jwt_and_refresh(auth(), appctx()) ->
+                              {ok, {appctx(), context(), response()}}
+                            | {error, invalid_authorization}.
 issue_jwt_and_refresh(#a{client = undefined}, _Ctx)   ->
     {error, invalid_authorization};
 issue_jwt_and_refresh(#a{resowner = undefined}, _Ctx) ->
@@ -362,8 +363,9 @@ refresh_access_token(Client, RefreshToken, Scope, Ctx0) ->
 
 %% @doc Validates a request for a JWT from a refresh token, issuing a new JWT
 %%      if valid.
--spec refresh_jwt(client(), token(), scope(), appctx())
-                            -> {ok, {appctx(), response()}} | {error, error()}.
+-spec refresh_jwt(client(), token(), scope(), appctx()) ->
+                    {ok, {appctx(), context(), response()}}
+                  | {error, error()}.
 refresh_jwt(Client, RefreshToken, Scope, Ctx0) ->
     case verify_refresh_token_basic(Client, RefreshToken, Scope, Ctx0) of
         {ok, {Ctx1, ClientId, ResOwner, VerifiedScope, TTL}} ->
