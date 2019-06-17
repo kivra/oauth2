@@ -236,7 +236,7 @@ issue_token(#a{client=Client, resowner=Owner, scope=Scope, ttl=TTL}, Ctx0) ->
     {ok, {Ctx1, oauth2_response:new(AccessToken, TTL, Owner, Scope)}}.
 
 %% @doc Issues an JWT without refresh token from an authorization.
--spec issue_jwt(auth(), appctx()) -> {ok, context(), response()}.
+-spec issue_jwt(auth(), appctx()) -> {ok, {appctx(), context(), response()}}.
 issue_jwt(#a{ client   = Client
             , resowner = ResOwner
             , scope    = Scope
