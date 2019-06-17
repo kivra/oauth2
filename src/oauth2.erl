@@ -64,7 +64,7 @@
            , resowner = undefined    :: undefined | term()
            , scope                   :: scope()
            , ttl      = 0            :: non_neg_integer()
-           , issuer   = <<"Kivra">>  :: binary()
+           , issuer   = undefined    :: undefined | binary()
            }).
 
 -type context()  :: proplists:proplist().
@@ -246,8 +246,6 @@ issue_jwt(#a{ client   = Client
     IssuedAt   = seconds_since_epoch(0),
     AccessCtx  = build_jwt_context( Issuer, ResOwner, ExpiryTime, IssuedAt
                                   , Client, Scope),
-    % jwt_sign() will add security_score and normalize_scope_to_list(Scope)
-    % before signing the access context
     {ok, JWT}  = ?BACKEND:jwt_sign(AccessCtx, Ctx),
     {ok, {Ctx, AccessCtx, oauth2_response:new(JWT, TTL)}}.
 
