@@ -56,6 +56,11 @@
 -callback associate_refresh_token(token(), grantctx(), appctx()) ->
                                           {ok, appctx()} | {error, notfound}.
 
+%% @doc Stores a new refresh token token(), associating it with
+%%      grantctx() and a device_id.
+-callback associate_refresh_token(token(), grantctx(), binary(), appctx()) ->
+                                          {ok, appctx()} | {error, notfound}.
+
 %% @doc Looks up an access token token(), returning the corresponding
 %%      context if a match is found.
 -callback resolve_access_token(token(), appctx()) ->
