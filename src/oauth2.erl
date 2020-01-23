@@ -460,10 +460,9 @@ verify_refresh_token_basic(Client, RefreshToken, Scope, Ctx0) ->
                     {ok, ExpiryAbsolute} = get(GrantCtx, <<"expiry_time">>),
                     case ExpiryAbsolute > seconds_since_epoch(0) of
                         true ->
-                            {ok, RegScope} = get(GrantCtx, <<"scope">>),
-                            case ?BACKEND:verify_scope(RegScope, Scope, Ctx2) of
-                                {error, _}                  ->
-                                    {error, invalid_scope};
+                            {ok, ResOwner} = get(GrantCtx, <<"resource_owner">>),
+                            case ?BACKEND:verify_resowner_scope(ResOwner, Scope, Ctx2) of
+                                {error, _}                  -> {error, invalid_scope};
                                 {ok, {Ctx3, VerifiedScope}} ->
                                     {ok, ClientId} = get(GrantCtx, <<"client">>),
                                     {ok, ResOwner} = get(GrantCtx, <<"resource_owner">>),
