@@ -283,7 +283,10 @@ issue_token_and_refresh( #a{client=Client, resowner=Owner, scope=Scope, ttl=TTL}
                                    , RTTL )}}.
 
 %% @doc Issues JWT and refresh token from an authorization.
--spec issue_jwt_and_refresh(auth(), binary(), appctx()) ->
+%%      * Associations: any value that's associated with the refresh_token, for
+%%        example user key and/or device id. The association is
+%%        implementation-specific.
+-spec issue_jwt_and_refresh(auth(), any(), appctx()) ->
                               {ok, {appctx(), context(), response()}}
                             | {error, invalid_authorization}.
 issue_jwt_and_refresh(#a{client = undefined}, _, _)   ->
@@ -295,7 +298,7 @@ issue_jwt_and_refresh( #a{ client   = Client
                          , scope    = Scope
                          , ttl      = TTL
                          , issuer   = Issuer}
-                     , DeviceId
+                     , Associations
                      , Ctx0) ->
     % access_token
     AccessExpiry  = seconds_since_epoch(TTL),
@@ -310,7 +313,7 @@ issue_jwt_and_refresh( #a{ client   = Client
     RefreshCtx    = build_context(Client, RefreshExpiry, ResOwner, Scope),
     RefreshToken  = ?TOKEN:generate(RefreshCtx),
     {ok, Ctx1}    = ?BACKEND:associate_refresh_token( RefreshToken, RefreshCtx
-                                                    , DeviceId, Ctx0),
+                                                    , Associations, Ctx0),
     {ok, {Ctx1, AccessCtx, oauth2_response:new(JWT, TTL, RefreshToken)}}.
 
 %% @doc Verifies an access code AccessCode, returning its associated
@@ -352,7 +355,7 @@ verify_access_code(AccessCode, Client, Ctx0) ->
                             -> {ok, {appctx(), response()}} | {error, error()}.
 refresh_access_token(Client, RefreshToken, Scope, Ctx0) ->
     case verify_refresh_token_basic(Client, RefreshToken, Scope, Ctx0) of
-      {ok, {Ctx1, ClientId, ResOwner, VerifiedScope, TTL, _DeviceId}} ->
+      {ok, {Ctx1, ClientId, ResOwner, VerifiedScope, TTL, _}} ->
           issue_token(#a{ client   = ClientId
                         , resowner = ResOwner
                         , scope    = VerifiedScope
@@ -368,7 +371,7 @@ refresh_access_token(Client, RefreshToken, Scope, Ctx0) ->
                   | {error, error()}.
 refresh_jwt(Client, RefreshToken, Scope, Ctx0) ->
     case verify_refresh_token_basic(Client, RefreshToken, Scope, Ctx0) of
-        {ok, {Ctx1, ClientId, ResOwner, VerifiedScope, TTL, DeviceId}} ->
+        {ok, {Ctx1, ClientId, ResOwner, VerifiedScope, TTL, Associations}} ->
             % RFC 6749 Section 10.4 (Security Considerations for refresh_token)
             %
             % Authorization server could employ refresh token rotation in which
@@ -387,7 +390,7 @@ refresh_jwt(Client, RefreshToken, Scope, Ctx0) ->
                                      , ttl      = TTL
                                      , issuer   = ?BACKEND:jwt_issuer()
                                      }
-                                 , DeviceId
+                                 , Associations
                                  , Ctx1);
         {error, _} = E -> E
     end.
@@ -452,31 +455,36 @@ auth_client(Client, RedirUri, Ctx0) ->
 
 verify_refresh_token_basic(Client, RefreshToken, Scope, Ctx0) ->
     case auth_client(Client, no_redir, Ctx0) of
-        {error, _}             -> {error, invalid_client};
-        {ok, {Ctx1, ClientId}} ->
+        {error, _}              -> {error, invalid_client};
+        {ok, {Ctx1, ClientId0}} ->
             case ?BACKEND:resolve_refresh_token(RefreshToken, Ctx1) of
                 {error, _}             -> {error, invalid_grant};
                 {ok, {Ctx2, GrantCtx}} ->
-                    {ok, ExpiryAbsolute} = get(GrantCtx, <<"expiry_time">>),
-                    case ExpiryAbsolute > seconds_since_epoch(0) of
-                        true ->
-                            {ok, ResOwner} = get(GrantCtx, <<"resource_owner">>),
-                            case ?BACKEND:verify_resowner_scope(ResOwner, Scope, Ctx2) of
-                                {error, _}                  -> {error, invalid_scope};
-                                {ok, {Ctx3, VerifiedScope}} ->
-                                    {ok, ClientId} = get(GrantCtx, <<"client">>),
-                                    {ok, ResOwner} = get(GrantCtx, <<"resource_owner">>),
-                                    {ok, DeviceId} = get(GrantCtx, <<"device_id">>),
-                                    TTL            = oauth2_config:expiry_time(
-                                                       password_credentials),
-                                    {ok, { Ctx3, ClientId, ResOwner
-                                         , VerifiedScope, TTL, DeviceId}}
-                            end;
-                        false ->
-                            ?BACKEND:revoke_refresh_token(RefreshToken, Ctx2),
-                            {error, invalid_grant}
+                    {ok, ClientId1} = get(GrantCtx, <<"client">>),
+                    case ClientId0 =:= ClientId1 of
+                        false -> {error, invalid_client};
+                        true  -> verify_refresh_token_expiry_and_scope(
+                                     Ctx2, GrantCtx, ClientId1, RefreshToken, Scope)
                     end
             end
+    end.
+
+verify_refresh_token_expiry_and_scope(Ctx0, GrantCtx, ClientId, RefreshToken, Scope) ->
+    {ok, ExpiryAbsolute} = get(GrantCtx, <<"expiry_time">>),
+    case ExpiryAbsolute > seconds_since_epoch(0) of
+        true ->
+            {ok, ResOwner} = get(GrantCtx, <<"resource_owner">>),
+            case ?BACKEND:verify_resowner_scope(ResOwner, Scope, Ctx0) of
+                {error, _}                  -> {error, invalid_scope};
+                {ok, {Ctx1, VerifiedScope}} ->
+                    {ok, ResOwner}     = get(GrantCtx, <<"resource_owner">>),
+                    {ok, Associations} = get(GrantCtx, <<"associations">>),
+                    TTL                = oauth2_config:expiry_time(password_credentials),
+                    {ok, {Ctx1, ClientId, ResOwner, VerifiedScope, TTL, Associations}}
+            end;
+        false ->
+            ?BACKEND:revoke_refresh_token(RefreshToken, Ctx0),
+            {error, invalid_grant}
     end.
 
 -spec build_context(term(), non_neg_integer(), term(), scope()) -> context().
