@@ -32,6 +32,7 @@
 -export([authorize_client_credentials/3]).
 -export([authorize_code_grant/4]).
 -export([authorize_code_request/5]).
+-export([authorize_directly/4]).
 -export([issue_code/2]).
 -export([issue_token/2]).
 -export([issue_jwt/2]).
@@ -71,6 +72,7 @@
 -type auth()     :: #a{}.
 -type user()     :: any().                      %% Opaque User Object
 -type client()   :: any().                      %% Opaque Client Object
+-type resowner() :: any().                      %% Opaque Resource Owner Object
 -type rediruri() :: any().                      %% Opaque Redirection URI
 -type token()    :: binary().
 -type response() :: oauth2_response:response().
@@ -202,6 +204,17 @@ authorize_code_request(User, Client, RedirUri, Scope, Ctx0) ->
                     end
             end
     end.
+
+%% @doc Sometimes one wishes to authorize directly with a specific scope and/or
+%%      a specific TTL, and this function is for that.
+-spec authorize_directly(client(), resowner(), scope(), non_neg_integer()) ->
+  {ok, auth()}.
+authorize_directly(Client, ResOwner, Scope, TTL) ->
+  #a{ client   = Client
+    , resowner = ResOwner
+    , scope    = Scope
+    , ttl      = TTL
+    }.
 
 %% @doc Issues an authorization code from an authorization. Use it to implement
 %%      the following steps of RFC 6749:
