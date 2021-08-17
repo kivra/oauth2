@@ -1,0 +1,43 @@
+name: Erlang CI
+
+on: [push]
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+    name: OTP ${{matrix.otp}}
+    strategy:
+      matrix:
+        otp: ["23.2", "24.0"]
+    steps:
+    - uses: actions/checkout@v2.0.0
+    - uses: gleam-lang/setup-erlang@v1.1.2
+      with:
+        otp-version: ${{matrix.otp}}
+    - name: Compile
+      run: make compile
+    - name: Run xref
+      run: make xref
+    - name: Run dialyzer
+      run: make dialyze
+    - name: Run eunit tests
+      run: make eunit
+
+  release:
+    if: github.ref == 'refs/heads/master' && startsWith(github.event.head_commit.message, 'no-release:') == false
+    needs: build_and_test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Bump version and push tag
+      id: tag_version
+      uses: mathieudutour/github-tag-action@v5.3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Create a GitHub release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.tag_version.outputs.new_tag }}
+        release_name: Release ${{ steps.tag_version.outputs.new_tag }}
+        body: ${{ steps.tag_version.outputs.changelog }}

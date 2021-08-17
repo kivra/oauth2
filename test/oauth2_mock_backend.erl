@@ -26,7 +26,7 @@
 
 -module(oauth2_mock_backend).
 
--behavior(oauth2_backend).
+% -behavior(oauth2_backend).
 
 %%% Behavior API
 -export([authenticate_user/2]).
