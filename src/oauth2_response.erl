@@ -58,7 +58,7 @@
           access_token              :: undefined | oauth2:token()
           ,access_code              :: undefined | oauth2:token()
           ,expires_in               :: undefined | oauth2:lifetime()
-          ,resource_owner           :: undefined | term()
+          ,resource_owner           :: undefined | oauth2:resowner()
           ,scope                    :: undefined | oauth2:scope()
           ,refresh_token            :: undefined | oauth2:token()
           ,refresh_token_expires_in :: undefined | oauth2:lifetime()
@@ -67,7 +67,7 @@
 
 -type response() :: #response{}.
 -type token()    :: oauth2:token().
--type lifetime() :: oauth2:lifetime().
+-type lifetime() :: undefined | oauth2:lifetime().
 -type scope()    :: oauth2:scope().
 
 %%%_* Code =============================================================
@@ -218,7 +218,11 @@ to_binary([Binary]) when is_binary(Binary) ->
 to_binary([BinaryHead | Tail]) when is_binary(BinaryHead) ->
     <<BinaryHead/binary, " ", (to_binary(Tail))/binary>>;
 to_binary(List) when is_list(List) ->
-    to_binary(list_to_binary(List));
+    try
+        to_binary(list_to_binary(List))
+    catch
+        error:badarg -> term_to_binary(List)
+    end;
 to_binary(Atom) when is_atom(Atom) ->
     to_binary(atom_to_list(Atom));
 to_binary(Float) when is_float(Float) ->
@@ -228,7 +232,7 @@ to_binary(Integer) when is_integer(Integer) ->
 to_binary({Key, Value}) ->
     {to_binary(Key), to_binary(Value)};
 to_binary(Term) ->
-    to_binary(term_to_binary(Term)).
+    term_to_binary(Term).
 
 %%%_* Tests ============================================================
 -ifdef(TEST).

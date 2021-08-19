@@ -48,6 +48,7 @@
 -export_type([token/0]).
 -export_type([user/0]).
 -export_type([client/0]).
+-export_type([resowner/0]).
 -export_type([context/0]).
 -export_type([auth/0]).
 -export_type([lifetime/0]).
@@ -61,8 +62,8 @@
 
 %%%_ * Types -----------------------------------------------------------
 %% Opaque authentication record
--record(a, { client   = undefined    :: undefined | term()
-           , resowner = undefined    :: undefined | term()
+-record(a, { client   = undefined    :: undefined | client()
+           , resowner = undefined    :: undefined | resowner()
            , scope                   :: scope()
            , ttl      = 0            :: non_neg_integer()
            , issuer   = undefined    :: undefined | binary()
