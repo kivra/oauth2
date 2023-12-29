@@ -5,21 +5,27 @@ on: [push]
 jobs:
   build_and_test:
     runs-on: ubuntu-latest
-    name: OTP ${{matrix.otp}}
     strategy:
       matrix:
-        otp: ["23.2", "24.0"]
+        otp: ["24.0", "25.0"]
+    name: OTP ${{matrix.otp}}
     steps:
-    - uses: actions/checkout@v2.0.0
-    - uses: gleam-lang/setup-erlang@v1.1.2
+    - uses: actions/checkout@v4
+
+    - uses: erlef/setup-beam@v1.16.0
       with:
-        otp-version: ${{matrix.otp}}
+        otp-version: ${{ matrix.otp }}
+        rebar3-version: "3.20.0"
+
     - name: Compile
       run: make compile
+
     - name: Run xref
       run: make xref
+
     - name: Run dialyzer
       run: make dialyze
+
     - name: Run eunit tests
       run: make eunit
 
@@ -28,16 +34,7 @@ jobs:
     needs: build_and_test
     runs-on: ubuntu-latest
     steps:
-    - name: Bump version and push tag
-      id: tag_version
-      uses: mathieudutour/github-tag-action@v5.3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-    - name: Create a GitHub release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ steps.tag_version.outputs.new_tag }}
-        release_name: Release ${{ steps.tag_version.outputs.new_tag }}
-        body: ${{ steps.tag_version.outputs.changelog }}
+      - name: Create Tag (Release)
+        uses: kivra/github-tag-action@v6.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}

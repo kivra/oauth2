@@ -26,7 +26,7 @@
 
 -module(oauth2_mock_backend).
 
-% -behavior(oauth2_backend).
+-behavior(oauth2_backend).
 
 %%% Behavior API
 -export([authenticate_user/2]).
@@ -34,6 +34,7 @@
 -export([get_client_identity/2]).
 -export([associate_access_code/3]).
 -export([associate_refresh_token/3]).
+-export([associate_refresh_token/4]).
 -export([associate_access_token/3]).
 -export([resolve_access_code/2]).
 -export([resolve_refresh_token/2]).
@@ -84,6 +85,10 @@ associate_access_code(AccessCode, Context, AppContext) ->
 
 associate_refresh_token(RefreshToken, Context, AppContext) ->
     ets:insert(?ETS_TABLE, {RefreshToken, Context}),
+    {ok, AppContext}.
+
+associate_refresh_token(RefreshToken, Context, DeviceId, AppContext) ->
+    ets:insert(?ETS_TABLE, {RefreshToken, [{<<"device_id">>, DeviceId} | Context ]}),
     {ok, AppContext}.
 
 associate_access_token(AccessToken, Context, AppContext) ->
