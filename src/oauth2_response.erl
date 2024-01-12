@@ -151,7 +151,7 @@ refresh_token(#response{refresh_token = RefreshToken}) -> {ok, RefreshToken}.
 refresh_token(Response, NewRefreshToken) ->
     Response#response{refresh_token = NewRefreshToken}.
 
--spec refresh_token_expires_in(response()) -> {ok, lifetime()} | {error, not_set}.
+-spec refresh_token_expires_in(response()) -> {ok, undefined | lifetime()} | {error, not_set}.
 refresh_token_expires_in(#response{refresh_token = undefined})    ->
     {error, not_set};
 refresh_token_expires_in(#response{refresh_token_expires_in = RefreshTokenExpiresIn}) ->
@@ -218,15 +218,21 @@ to_binary([Binary]) when is_binary(Binary) ->
 to_binary([BinaryHead | Tail]) when is_binary(BinaryHead) ->
     <<BinaryHead/binary, " ", (to_binary(Tail))/binary>>;
 to_binary(List) when is_list(List) ->
-    to_binary(list_to_binary(List));
+    erlang:display({list, List}),
+    try
+        to_binary(list_to_binary(List))
+    catch
+        error:badarg ->
+            to_binary(lists:flatten(lists:map(fun to_binary/1, List)))
+        end;
 to_binary(Atom) when is_atom(Atom) ->
     to_binary(atom_to_list(Atom));
 to_binary(Float) when is_float(Float) ->
     to_binary(float_to_list(Float));
 to_binary(Integer) when is_integer(Integer) ->
     to_binary(integer_to_list(Integer));
-to_binary({Key, Value}) ->
-    {to_binary(Key), to_binary(Value)};
+to_binary({_Key, _Value} = Tuple) ->
+    to_binary(tuple_to_list(Tuple));
 to_binary(Term) ->
     to_binary(term_to_binary(Term)).
 

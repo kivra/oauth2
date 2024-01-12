@@ -1,0 +1,40 @@
+name: Erlang CI
+
+on: [push]
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        otp: ["24.0", "25.0"]
+    name: OTP ${{matrix.otp}}
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: erlef/setup-beam@v1.16.0
+      with:
+        otp-version: ${{ matrix.otp }}
+        rebar3-version: "3.20.0"
+
+    - name: Compile
+      run: make compile
+
+    - name: Run xref
+      run: make xref
+
+    - name: Run dialyzer
+      run: make dialyze
+
+    - name: Run eunit tests
+      run: make eunit
+
+  release:
+    if: github.ref == 'refs/heads/master' && startsWith(github.event.head_commit.message, 'no-release:') == false
+    needs: build_and_test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Tag (Release)
+        uses: kivra/github-tag-action@v6.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
