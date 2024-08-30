@@ -208,7 +208,7 @@ authorize_code_request(User, Client, RedirUri, Scope, Ctx0) ->
 %% @doc Sometimes one wishes to authorize directly with a specific scope and/or
 %%      a specific TTL, and this function is for that.
 -spec authorize_directly(client(), resowner(), scope(), non_neg_integer()) ->
-  {ok, auth()}.
+  auth().
 authorize_directly(Client, ResOwner, Scope, TTL) ->
   #a{ client   = Client
     , resowner = ResOwner
