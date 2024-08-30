@@ -7,7 +7,7 @@ REBAR = ./rebar
 all: deps compile
 
 deps:
-	$(REBAR) -C rebar.test.config get-deps
+	$(REBAR) get-deps
 
 compile:
 	$(REBAR) compile
@@ -20,10 +20,10 @@ clean:
 test: ct dialyze doc
 
 test-build:
-	$(REBAR) -C rebar.test.config compile
+	$(REBAR) compile
 
 ct: clean deps test-build
-	$(REBAR) -C rebar.test.config eunit skip_deps=true
+	$(REBAR) eunit skip_deps=true
 
 build-plt:
 	$(DIALYZER) --build_plt --output_plt .$(PROJECT).plt \
