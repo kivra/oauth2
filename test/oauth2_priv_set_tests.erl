@@ -34,61 +34,104 @@
 %%%===================================================================
 
 proper_type_spec_test_() ->
-    {timeout, 1200, [{?LINE,
-                      fun() -> proper:check_specs(oauth2_priv_set,
-                                                  [{to_file, user}]) end}]}.
+    {timeout, 1200, [
+        {?LINE, fun() ->
+            proper:check_specs(
+                oauth2_priv_set,
+                [{to_file, user}]
+            )
+        end}
+    ]}.
 
 new_test_() ->
     [
-     ?_assert(oauth2_priv_set:is_member(
+        ?_assert(
+            oauth2_priv_set:is_member(
                 <<"x.y.z">>,
-                oauth2_priv_set:new(<<"x.y.z">>))),
-     ?_assert(oauth2_priv_set:is_member(
+                oauth2_priv_set:new(<<"x.y.z">>)
+            )
+        ),
+        ?_assert(
+            oauth2_priv_set:is_member(
                 <<"a.b.c">>,
-                oauth2_priv_set:new([<<"a.b.c">>, <<"a.b.d">>]))),
-     ?_assertNot(oauth2_priv_set:is_member(
-                   <<"a.b.c">>,
-                   oauth2_priv_set:new(<<"x.y.z">>))),
-     ?_assertNot(oauth2_priv_set:is_member(
-                   <<"a.b.e">>,
-                   oauth2_priv_set:new([<<"a.b.c">>, <<"a.b.a">>])))
+                oauth2_priv_set:new([<<"a.b.c">>, <<"a.b.d">>])
+            )
+        ),
+        ?_assertNot(
+            oauth2_priv_set:is_member(
+                <<"a.b.c">>,
+                oauth2_priv_set:new(<<"x.y.z">>)
+            )
+        ),
+        ?_assertNot(
+            oauth2_priv_set:is_member(
+                <<"a.b.e">>,
+                oauth2_priv_set:new([<<"a.b.c">>, <<"a.b.a">>])
+            )
+        )
     ].
 
 is_subset_test_() ->
     [
-     ?_assert(oauth2_priv_set:is_subset(
+        ?_assert(
+            oauth2_priv_set:is_subset(
                 oauth2_priv_set:new(<<"a.b.c.d.e">>),
                 oauth2_priv_set:new([
-                                     <<"a.b">>,
-                                     <<"a.b.x.y">>,
-                                     <<"a.b.z.x">>,
-                                     <<"a.b.k.d.g.e">>,
-                                     <<"a.b.m.n.p.q">>,
-                                     <<"a.b.c.d.*">>
-                                    ]))),
-     ?_assert(oauth2_priv_set:is_subset(
+                    <<"a.b">>,
+                    <<"a.b.x.y">>,
+                    <<"a.b.z.x">>,
+                    <<"a.b.k.d.g.e">>,
+                    <<"a.b.m.n.p.q">>,
+                    <<"a.b.c.d.*">>
+                ])
+            )
+        ),
+        ?_assert(
+            oauth2_priv_set:is_subset(
                 oauth2_priv_set:new(<<"a.b.c">>),
-                oauth2_priv_set:new([<<"a.b.c">>, <<"a.s.d.f.g.h">>]))),
-     ?_assert(oauth2_priv_set:is_subset(
+                oauth2_priv_set:new([<<"a.b.c">>, <<"a.s.d.f.g.h">>])
+            )
+        ),
+        ?_assert(
+            oauth2_priv_set:is_subset(
                 oauth2_priv_set:new(<<"x.y.z">>),
-                oauth2_priv_set:new([<<"x.y">>, <<"x.*">>]))),
-     ?_assert(oauth2_priv_set:is_subset(
+                oauth2_priv_set:new([<<"x.y">>, <<"x.*">>])
+            )
+        ),
+        ?_assert(
+            oauth2_priv_set:is_subset(
                 oauth2_priv_set:new(<<"x.y.z">>),
-                oauth2_priv_set:new([<<"x.*">>, <<"x.y">>]))),
-     ?_assert(oauth2_priv_set:is_subset(
+                oauth2_priv_set:new([<<"x.*">>, <<"x.y">>])
+            )
+        ),
+        ?_assert(
+            oauth2_priv_set:is_subset(
                 oauth2_priv_set:new(<<"x.*">>),
-                oauth2_priv_set:new([<<"a.*">>, <<"x.*">>]))),
-     ?_assertNot(oauth2_priv_set:is_subset(
-                   oauth2_priv_set:new(<<"a.b.c">>),
-                   oauth2_priv_set:new(<<"a.b">>))),
-     ?_assertNot(oauth2_priv_set:is_subset(
-                   oauth2_priv_set:new(<<"x.y.z">>),
-                   oauth2_priv_set:new(<<"x.z.*">>))),
-     ?_assertNot(oauth2_priv_set:is_subset(
-                   oauth2_priv_set:new(<<"a.*">>),
-                   oauth2_priv_set:new([<<"a.b.*">>,
-                                        <<"a.c.*">>,
-                                        <<"a.d.*">>,
-                                        <<"a.e.*">>,
-                                        <<"a.f.z">>])))
+                oauth2_priv_set:new([<<"a.*">>, <<"x.*">>])
+            )
+        ),
+        ?_assertNot(
+            oauth2_priv_set:is_subset(
+                oauth2_priv_set:new(<<"a.b.c">>),
+                oauth2_priv_set:new(<<"a.b">>)
+            )
+        ),
+        ?_assertNot(
+            oauth2_priv_set:is_subset(
+                oauth2_priv_set:new(<<"x.y.z">>),
+                oauth2_priv_set:new(<<"x.z.*">>)
+            )
+        ),
+        ?_assertNot(
+            oauth2_priv_set:is_subset(
+                oauth2_priv_set:new(<<"a.*">>),
+                oauth2_priv_set:new([
+                    <<"a.b.*">>,
+                    <<"a.c.*">>,
+                    <<"a.d.*">>,
+                    <<"a.e.*">>,
+                    <<"a.f.z">>
+                ])
+            )
+        )
     ].
