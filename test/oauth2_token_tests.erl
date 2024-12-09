@@ -34,9 +34,14 @@
 %%%===================================================================
 
 proper_type_spec_test_() ->
-    {timeout, 1200, [{?LINE,
-                      fun() -> proper:check_specs(oauth2_token,
-                                                  [{to_file, user}]) end}]}.
+    {timeout, 1200, [
+        {?LINE, fun() ->
+            proper:check_specs(
+                oauth2_token,
+                [{to_file, user}]
+            )
+        end}
+    ]}.
 
 generate_test() ->
     Token = oauth2_token:generate([]),
@@ -52,4 +57,4 @@ generate_test() ->
 is_alphanum(C) when C >= 16#30 andalso C =< 16#39 -> true;
 is_alphanum(C) when C >= 16#41 andalso C =< 16#5A -> true;
 is_alphanum(C) when C >= 16#61 andalso C =< 16#7A -> true;
-is_alphanum(_)                                    -> false.
+is_alphanum(_) -> false.
