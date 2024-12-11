@@ -42,11 +42,10 @@ expiry_time() -> get_optional(expiry_time, ?DEFAULT_TOKEN_EXPIRY).
 -spec expiry_time(atom()) -> non_neg_integer().
 expiry_time(Flow) ->
     case application:get_env(oauth2, Flow) of
-        undefined ->
-            expiry_time();
+        undefined   -> expiry_time();
         {ok, Value} ->
             case lists:keyfind(expiry_time, 1, Value) of
-                false -> expiry_time();
+                false       -> expiry_time();
                 {_Key, Val} -> Val
             end
     end.
@@ -62,13 +61,13 @@ token_generation() -> get_optional(token_generation, oauth2_token).
 %%%_* Private functions ================================================
 get_optional(Key, Default) ->
     case application:get_env(oauth2, Key) of
-        undefined -> Default;
+        undefined   -> Default;
         {ok, Value} -> Value
     end.
 
 get_required(Key) ->
     case application:get_env(oauth2, Key) of
-        undefined -> throw({missing_config, Key});
+        undefined   -> throw({missing_config, Key});
         {ok, Value} -> Value
     end.
 
