@@ -55,20 +55,20 @@
 
 %%%_ * Types -----------------------------------------------------------
 -record(response, {
-    access_token :: undefined | oauth2:token(),
-    access_code :: undefined | oauth2:token(),
-    expires_in :: undefined | oauth2:lifetime(),
-    resource_owner :: undefined | term(),
-    scope :: undefined | oauth2:scope(),
-    refresh_token :: undefined | oauth2:token(),
-    refresh_token_expires_in :: undefined | oauth2:lifetime(),
-    token_type = ?TOKEN_TYPE :: binary()
-}).
+          access_token              :: undefined | oauth2:token()
+          ,access_code              :: undefined | oauth2:token()
+          ,expires_in               :: undefined | oauth2:lifetime()
+          ,resource_owner           :: undefined | term()
+          ,scope                    :: undefined | oauth2:scope()
+          ,refresh_token            :: undefined | oauth2:token()
+          ,refresh_token_expires_in :: undefined | oauth2:lifetime()
+          ,token_type = ?TOKEN_TYPE :: binary()
+         }).
 
 -type response() :: #response{}.
--type token() :: oauth2:token().
+-type token()    :: oauth2:token().
 -type lifetime() :: oauth2:lifetime().
--type scope() :: oauth2:scope().
+-type scope()    :: oauth2:scope().
 
 %%%_* Code =============================================================
 %%%_ * API -------------------------------------------------------------
@@ -81,51 +81,47 @@ new(AccessToken, ExpiresIn) ->
     #response{access_token = AccessToken, expires_in = ExpiresIn}.
 
 new(AccessToken, ExpiresIn, RefreshToken) ->
-    #response{
-        access_token = AccessToken,
-        expires_in = ExpiresIn,
-        refresh_token = RefreshToken
-    }.
+    #response{ access_token             = AccessToken
+             , expires_in               = ExpiresIn
+             , refresh_token            = RefreshToken
+             }.
 
 -spec new(token(), lifetime(), term(), scope()) -> response().
 new(AccessToken, ExpiresIn, ResOwner, Scope) ->
-    #response{
-        access_token = AccessToken,
-        expires_in = ExpiresIn,
-        resource_owner = ResOwner,
-        scope = Scope
-    }.
+    #response{ access_token   = AccessToken
+             , expires_in     = ExpiresIn
+             , resource_owner = ResOwner
+             , scope          = Scope
+             }.
 
 -spec new(token(), lifetime(), term(), scope(), token(), lifetime()) -> response().
 new(AccessToken, ExpiresIn, ResOwner, Scope, RefreshToken, RExpiresIn) ->
-    #response{
-        access_token = AccessToken,
-        expires_in = ExpiresIn,
-        resource_owner = ResOwner,
-        scope = Scope,
-        refresh_token = RefreshToken,
-        refresh_token_expires_in = RExpiresIn
-    }.
+    #response{ access_token             = AccessToken
+             , expires_in               = ExpiresIn
+             , resource_owner           = ResOwner
+             , scope                    = Scope
+             , refresh_token            = RefreshToken
+             , refresh_token_expires_in = RExpiresIn
+             }.
 
 -spec new(_, lifetime(), term(), scope(), _, _, token()) -> response().
 new(_, ExpiresIn, ResOwner, Scope, _, _, AccessCode) ->
-    #response{
-        access_code = AccessCode,
-        expires_in = ExpiresIn,
-        resource_owner = ResOwner,
-        scope = Scope
-    }.
+    #response{ access_code    = AccessCode
+             , expires_in     = ExpiresIn
+             , resource_owner = ResOwner
+             , scope          = Scope
+             }.
 
 -spec access_token(response()) -> {ok, token()} | {error, not_set}.
-access_token(#response{access_token = undefined}) -> {error, not_set};
+access_token(#response{access_token = undefined})   -> {error, not_set};
 access_token(#response{access_token = AccessToken}) -> {ok, AccessToken}.
 
 -spec access_token(response(), token()) -> response().
 access_token(Response, NewAccessToken) ->
     Response#response{access_token = NewAccessToken}.
 
--spec access_code(response()) -> {ok, token()} | {error, not_set}.
-access_code(#response{access_code = undefined}) -> {error, not_set};
+-spec access_code(response())  -> {ok, token()} | {error, not_set}.
+access_code(#response{access_code = undefined})  -> {error, not_set};
 access_code(#response{access_code = AccessCode}) -> {ok, AccessCode}.
 
 -spec access_code(response(), token()) -> response().
@@ -142,13 +138,13 @@ expires_in(Response, NewExpiresIn) ->
 
 -spec scope(response()) -> {ok, scope()} | {error, not_set}.
 scope(#response{scope = undefined}) -> {error, not_set};
-scope(#response{scope = Scope}) -> {ok, Scope}.
+scope(#response{scope = Scope})     -> {ok, Scope}.
 
 -spec scope(response(), scope()) -> response().
 scope(Response, NewScope) -> Response#response{scope = NewScope}.
 
 -spec refresh_token(response()) -> {ok, token()} | {error, not_set}.
-refresh_token(#response{refresh_token = undefined}) -> {error, not_set};
+refresh_token(#response{refresh_token = undefined})    -> {error, not_set};
 refresh_token(#response{refresh_token = RefreshToken}) -> {ok, RefreshToken}.
 
 -spec refresh_token(response(), token()) -> response().
@@ -156,7 +152,7 @@ refresh_token(Response, NewRefreshToken) ->
     Response#response{refresh_token = NewRefreshToken}.
 
 -spec refresh_token_expires_in(response()) -> {ok, lifetime()} | {error, not_set}.
-refresh_token_expires_in(#response{refresh_token = undefined}) ->
+refresh_token_expires_in(#response{refresh_token = undefined})    ->
     {error, not_set};
 refresh_token_expires_in(#response{refresh_token_expires_in = RefreshTokenExpiresIn}) ->
     {ok, RefreshTokenExpiresIn}.
@@ -194,13 +190,12 @@ to_map(Response) ->
 %%%_* Private functions ================================================
 -spec response_foldr(Response, Fun, Acc0) -> Return when
     Response :: response(),
-    Fun :: fun((Key :: binary(), Value :: any(), Acc :: any()) -> Acc :: any()),
-    Acc0 :: any(),
-    Return :: any().
+    Fun      :: fun((Key::binary(), Value::any(), Acc::any()) -> Acc::any()),
+    Acc0     :: any(),
+    Return   :: any().
 response_foldr(Record, Fun, Acc0) ->
     Keys = record_info(fields, response),
-    %% Head is 'response'!
-    Values = tl(tuple_to_list(Record)),
+    Values = tl(tuple_to_list(Record)), %% Head is 'response'!
     response_foldr(Keys, Values, Fun, Acc0).
 
 response_foldr([], [], _Fun, Acc0) ->

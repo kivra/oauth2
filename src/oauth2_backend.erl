@@ -22,97 +22,95 @@
 
 %%%_ * Types -----------------------------------------------------------
 -type grantctx() :: oauth2:context().
--type appctx() :: oauth2:appctx().
--type token() :: oauth2:token().
--type scope() :: oauth2:scope().
--type user() :: oauth2:user().
--type client() :: oauth2:client().
+-type appctx()   :: oauth2:appctx().
+-type token()    :: oauth2:token().
+-type scope()    :: oauth2:scope().
+-type user()     :: oauth2:user().
+-type client()   :: oauth2:client().
 
 %%%_* Behaviour ========================================================
 %% @doc Authenticates a combination of username and password.
 %%      Returns the resource owner identity if the credentials are valid.
--callback authenticate_user(user(), appctx()) ->
-    {ok, {appctx(), term()}}
-    | {error, atom()}.
+-callback authenticate_user(user(), appctx()) -> {ok, {appctx(), term()}}
+                                               | {error, atom()}.
 
 %% @doc Authenticates a client's credentials for a given scope.
--callback authenticate_client(client(), appctx()) ->
-    {ok, {appctx(), client()}}
-    | {error, notfound | badsecret}.
+-callback authenticate_client(client(), appctx()) -> {ok, {appctx(), client()}}
+                                                | {error, notfound | badsecret}.
 
 %% @doc Stores a new access code token(), associating it with Context.
 %%      The context is a proplist carrying information about the identity
 %%      with which the code is associated, when it expires, etc.
 -callback associate_access_code(token(), grantctx(), appctx()) ->
-    {ok, appctx()} | {error, notfound}.
+                                          {ok, appctx()} | {error, notfound}.
 
 %% @doc Stores a new access token token(), associating it with Context.
 %%      The context is a proplist carrying information about the identity
 %%      with which the token is associated, when it expires, etc.
 -callback associate_access_token(token(), grantctx(), appctx()) ->
-    {ok, appctx()} | {error, notfound}.
+                                          {ok, appctx()} | {error, notfound}.
 
 %% @doc Stores a new refresh token token(), associating it with
 %%      grantctx(). The context is a proplist carrying information about the
 %%      identity with which the token is associated, when it expires, etc.
 -callback associate_refresh_token(token(), grantctx(), appctx()) ->
-    {ok, appctx()} | {error, notfound}.
+                                          {ok, appctx()} | {error, notfound}.
 
 %% @doc Stores a new refresh token token(), associating it with
 %%      grantctx() and a device_id.
 -callback associate_refresh_token(token(), grantctx(), binary(), appctx()) ->
-    {ok, appctx()} | {error, notfound}.
+                                          {ok, appctx()} | {error, notfound}.
 
 %% @doc Looks up an access token token(), returning the corresponding
 %%      context if a match is found.
 -callback resolve_access_token(token(), appctx()) ->
-    {ok, {appctx(), grantctx()}} | {error, notfound}.
+                            {ok, {appctx(), grantctx()}} | {error, notfound}.
 
 %% @doc Looks up an access code token(), returning the corresponding
 %%      context if a match is found.
 -callback resolve_access_code(token(), appctx()) ->
-    {ok, {appctx(), grantctx()}} | {error, notfound}.
+                            {ok, {appctx(), grantctx()}} | {error, notfound}.
 
 %% @doc Looks up an refresh token token(), returning the corresponding
 %%      context if a match is found.
 -callback resolve_refresh_token(token(), appctx()) ->
-    {ok, {appctx(), grantctx()}} | {error, notfound}.
+                            {ok, {appctx(), grantctx()}} | {error, notfound}.
 
 %% @doc Revokes an access token token(), so that it cannot be used again.
 -callback revoke_access_token(token(), appctx()) ->
-    {ok, appctx()} | {error, notfound}.
+                                          {ok, appctx()} | {error, notfound}.
 
 %% @doc Revokes an access code token(), so that it cannot be used again.
 -callback revoke_access_code(token(), appctx()) ->
-    {ok, appctx()} | {error, notfound}.
+                                          {ok, appctx()} | {error, notfound}.
 
 %% @doc Revokes an refresh token token(), so that it cannot be used again.
 -callback revoke_refresh_token(token(), appctx()) ->
-    {ok, appctx()} | {error, notfound}.
+                                          {ok, appctx()} | {error, notfound}.
 
 %% @doc Returns a client identity for a given id.
 -callback get_client_identity(client(), appctx()) ->
-    {ok, {appctx(), client()}} | {error, notfound | badsecret}.
+                    {ok, {appctx(), client()}} | {error, notfound | badsecret}.
 
 %% @doc Verifies that RedirectionUri is a valid redirection URI for the
 %%      client identified by Identity.
 -callback verify_redirection_uri(client(), binary(), appctx()) ->
-    {ok, appctx()} | {error, notfound | baduri}.
+                                 {ok, appctx()} | {error, notfound | baduri}.
 
 %% @doc Verifies that scope() is a valid scope for the client identified
 %%      by Identity.
 -callback verify_client_scope(client(), scope(), appctx()) ->
-    {ok, {appctx(), scope()}} | {error, notfound | badscope}.
+                    {ok, {appctx(), scope()}} | {error, notfound | badscope}.
 
 %% @doc Verifies that scope() is a valid scope for the resource
 %%      owner identified by Identity.
 -callback verify_resowner_scope(term(), scope(), appctx()) ->
-    {ok, {appctx(), scope()}} | {error, notfound | badscope}.
+                    {ok, {appctx(), scope()}} | {error, notfound | badscope}.
 
 %% @doc Verifies that scope() is a valid scope of the set of scopes defined
 %%      by Validscope()s.
 -callback verify_scope(scope(), scope(), appctx()) ->
-    {ok, {appctx(), scope()}} | {error, notfound | badscope}.
+                    {ok, {appctx(), scope()}} | {error, notfound | badscope}.
 
 %% @doc Sign the grant context with a private key and produce a JWT.
 %%      The grant context is a proplist carrying information about the identity
