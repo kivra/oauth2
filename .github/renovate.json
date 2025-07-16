@@ -1,0 +1,35 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:best-practices",
+    ":disableDigestUpdates"
+  ],
+  "customManagers": [
+    {
+      "description": "Match Hex.pm-based dependencies in rebar.config",
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/rebar.config/"
+      ],
+      "datasourceTemplate": "hex",
+      "matchStrings": [
+        "\\n\\s*,?\\s*\\[?\\s*\\{\\s*'?(?<depName>[a-z][a-z0-9_]*)'?\\s*,\\s*\"(?<currentValue>v?\\d+\\.\\d+(\\.\\d+)?)\""
+      ],
+      "versioningTemplate": "semver",
+      "extractVersionTemplate": "^(==)?\\s*(?<version>.*$)"
+    },
+    {
+      "description": "Match GitHub-based dependencies in rebar.config",
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/rebar.config/"
+      ],
+      "datasourceTemplate": "github-tags",
+      "matchStrings": [
+        "\\{\\s*git(_subdir)?\\s*,\\s*\"https://github\\.com/(?<org>[^\\/]+)\\/(?<depName>[^.]*)\\.git\"\\s*,\\s*\\{\\s*tag\\s*,\\s*\"(?<prefix>.+/v)?(?<currentValue>[^\"]*)\""
+      ],
+      "depNameTemplate": "{{{org}}}/{{{depName}}}{{#if prefix}}/{{{replace '/v$' '' prefix}}}{{/if}}",
+      "extractVersionTemplate": "^{{{prefix}}}(?<version>.*$)"
+    }
+  ]
+}
