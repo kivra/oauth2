@@ -126,7 +126,7 @@ access_code_test() ->
     ?assertEqual({ok, ?CODE},
                  oauth2_response:access_code(
                    oauth2_response:access_code(
-                     oauth2_response:new([], [], [], [], [], ?CODE),
+                     oauth2_response:new(<<>>, 0, [], [], <<>>, 0),
                      ?CODE))).
 
 expires_in_test() ->
@@ -161,6 +161,7 @@ token_type_test() ->
     ?assertEqual({ok, ?TOKEN_TYPE},
                  oauth2_response:token_type(oauth2_response:new(?ACCESS))).
 
+-dialyzer({no_opaque, to_proplist_test/0}).
 to_proplist_test() ->
     Property = ?FORALL(
         {AccessToken, Expiry, ResourceOwner, Scope, RefreshToken, RefreshExpiry},
@@ -180,6 +181,7 @@ to_proplist_test() ->
     ?assert(proper:quickcheck(Property, [{to_file, user}])).
 
 -ifndef(pre17).
+-dialyzer({no_opaque, to_map_test/0}).
 to_map_test() ->
     Property = ?FORALL(
         {AccessToken, Expiry, ResourceOwner, Scope, RefreshToken, RefreshExpiry},

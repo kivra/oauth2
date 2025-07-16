@@ -34,6 +34,7 @@
 -export([get_client_identity/2]).
 -export([associate_access_code/3]).
 -export([associate_refresh_token/3]).
+-export([associate_refresh_token/4]).
 -export([associate_access_token/3]).
 -export([resolve_access_code/2]).
 -export([resolve_refresh_token/2]).
@@ -46,6 +47,9 @@
 -export([verify_client_scope/3]).
 -export([verify_resowner_scope/3]).
 -export([verify_scope/3]).
+-export([jwt_issuer/0]).
+-export([jwt_sign/2]).
+-export([jwt_verify/1]).
 
 %%% mock_backend-specifics
 -export([start/0]).
@@ -84,6 +88,10 @@ associate_access_code(AccessCode, Context, AppContext) ->
 
 associate_refresh_token(RefreshToken, Context, AppContext) ->
     ets:insert(?ETS_TABLE, {RefreshToken, Context}),
+    {ok, AppContext}.
+
+associate_refresh_token(RefreshToken, Context, DeviceId, AppContext) ->
+    ets:insert(?ETS_TABLE, {RefreshToken, [{<<"device_id">>, DeviceId} | Context ]}),
     {ok, AppContext}.
 
 associate_access_token(AccessToken, Context, AppContext) ->
@@ -131,6 +139,12 @@ verify_scope(_, _, _)                  -> {error, invalid_scope}.
 %% Set up the ETS table for holding access tokens.
 start() -> ets:new(?ETS_TABLE, [public, named_table, {read_concurrency, true}]).
 stop()  -> ets:delete(?ETS_TABLE).
+
+jwt_issuer() -> <<"tests_example">>.
+
+jwt_sign(_, _) -> error(not_implemented).
+
+jwt_verify(_) -> error(not_implemented).
 
 %%%_* Tests ============================================================
 -ifdef(TEST).
