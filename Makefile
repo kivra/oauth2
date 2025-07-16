@@ -1,15 +1,15 @@
-.PHONY: ci clean test ct dialyze xref
+.PHONY: ci clean test eunit dialyze xref
 
 ci: clean xref dialyze test
 
-test: clean ct
+test: clean eunit
 
 clean:
 	rebar3 clean
 	rm -f test/*.beam
 	rm -f erl_crash.dump
 
-ct:
+eunit:
 	rebar3 eunit
 
 dialyze:
