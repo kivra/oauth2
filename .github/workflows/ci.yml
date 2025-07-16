@@ -1,5 +1,7 @@
 ---
 name: ci
+permissions:
+  contents: write
 
 on:
   # for feature branches
