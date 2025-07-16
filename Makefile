@@ -1,5 +1,3 @@
-PROJECT = oauth2
-
 .PHONY: all deps compile clean test ct build-plt dialyze
 
 all: deps compile
@@ -15,7 +13,7 @@ clean:
 	rm -f test/*.beam
 	rm -f erl_crash.dump
 
-test: ct dialyze doc
+test: ct dialyze
 
 test-build:
 	rebar3 compile
