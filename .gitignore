@@ -4,3 +4,4 @@ deps
 .rebar
 *.plt
 _build
+*.xml
