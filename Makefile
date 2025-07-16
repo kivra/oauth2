@@ -1,25 +1,20 @@
-.PHONY: all deps compile clean test ct build-plt dialyze
+.PHONY: ci clean test ct dialyze xref
 
-all: deps compile
+ci: clean xref dialyze test
 
-deps:
-	rebar3 get-deps
-
-compile:
-	rebar3 compile
+test: clean ct
 
 clean:
 	rebar3 clean
 	rm -f test/*.beam
 	rm -f erl_crash.dump
 
-test: ct dialyze
+ct:
+	rebar3 eunit
 
-test-build:
-	rebar3 compile
-
-ct: clean deps test-build
-	rebar3 eunit skip_deps=true
-
-dialyze: clean deps test-build
+dialyze:
 	rebar3 dialyzer
+
+xref:
+	rebar3 xref
+
