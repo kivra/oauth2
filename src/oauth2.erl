@@ -62,28 +62,30 @@
 %%%_ * Types -----------------------------------------------------------
 %% Opaque authentication record
 -record(a, { client   = undefined    :: undefined | term()
+           , device_id = undefined   :: undefined | device_id()
            , resowner = undefined    :: undefined | term()
            , scope                   :: scope()
            , ttl      = 0            :: non_neg_integer()
            , issuer   = undefined    :: undefined | binary()
            }).
 
--type context()  :: proplists:proplist().
--type auth()     :: #a{}.
--type user()     :: any().                      %% Opaque User Object
--type client()   :: any().                      %% Opaque Client Object
--type resowner() :: any().                      %% Opaque Resource Owner Object
--type rediruri() :: any().                      %% Opaque Redirection URI
--type token()    :: binary().
--type response() :: oauth2_response:response().
--type lifetime() :: non_neg_integer().
--type scope()    :: list(binary()) | binary().
--type appctx()   :: term().
--type error()    :: access_denied | invalid_client | invalid_grant |
-                    invalid_request | invalid_authorization | invalid_scope |
-                    unauthorized_client | unsupported_grant_type |
-                    unsupported_response_type | server_error |
-                    temporarily_unavailable | atom().
+-type context()   :: proplists:proplist().
+-type auth()      :: #a{}.
+-type user()      :: any().                      %% Opaque User Object
+-type client()    :: any().                      %% Opaque Client Object
+-type resowner()  :: any().                      %% Opaque Resource Owner Object
+-type rediruri()  :: any().                      %% Opaque Redirection URI
+-type device_id() :: any().
+-type token()     :: binary().
+-type response()  :: oauth2_response:response().
+-type lifetime()  :: non_neg_integer().
+-type scope()     :: list(binary()) | binary().
+-type appctx()    :: term().
+-type error()     :: access_denied | invalid_client | invalid_grant |
+                     invalid_request | invalid_authorization | invalid_scope |
+                     unauthorized_client | unsupported_grant_type |
+                     unsupported_response_type | server_error |
+                     temporarily_unavailable | atom().
 
 %%%_* Code =============================================================
 %%%_ * API -------------------------------------------------------------
@@ -239,14 +241,16 @@ issue_code(#a{client=Client, resowner=Owner, scope=Scope, ttl=TTL}, Ctx0) ->
 %%        must be issued.
 %%      - 4.4.3. Client Credentials Grant > Access Token Response, with the
 %%        result of authorize_client_credentials/4.
--spec issue_token(auth(), appctx()) -> {ok, {appctx(), response()}}.
+-spec issue_token(auth(), appctx()) -> {ok, {appctx(), response()}} | {error, error()}.
 issue_token(#a{client=Client, resowner=Owner, scope=Scope, ttl=TTL}, Ctx0) ->
     GrantContext = build_context(Client,seconds_since_epoch(TTL),Owner,Scope),
     AccessToken  = ?TOKEN:generate(GrantContext),
-    {ok, Ctx1}   = ?BACKEND:associate_access_token( AccessToken
-                                                  , GrantContext
-                                                  , Ctx0 ),
-    {ok, {Ctx1, oauth2_response:new(AccessToken, TTL, Owner, Scope)}}.
+    case ?BACKEND:associate_access_token(AccessToken, GrantContext, Ctx0) of
+        {ok, Ctx1} ->
+            {ok, {Ctx1, oauth2_response:new(AccessToken, TTL, Owner, Scope)}};
+        {error, Reason} ->
+            {error, Reason}
+    end.
 
 %% @doc Issues an JWT without refresh token from an authorization.
 -spec issue_jwt(auth(), appctx()) -> {ok, {appctx(), context(), response()}}.
@@ -275,7 +279,7 @@ issue_token_and_refresh(#a{client = undefined}, _Ctx)   ->
   {error, invalid_authorization};
 issue_token_and_refresh(#a{resowner = undefined}, _Ctx) ->
   {error, invalid_authorization};
-issue_token_and_refresh( #a{client=Client, resowner=Owner, scope=Scope, ttl=TTL}
+issue_token_and_refresh( #a{client=Client, resowner=Owner, scope=Scope, ttl=TTL, device_id = DeviceId}
                        , Ctx0 ) ->
     RTTL         = oauth2_config:expiry_time(refresh_token),
     RefreshCtx   = build_context(Client,seconds_since_epoch(RTTL),Owner,Scope),
@@ -288,6 +292,11 @@ issue_token_and_refresh( #a{client=Client, resowner=Owner, scope=Scope, ttl=TTL}
     {ok, Ctx2}   = ?BACKEND:associate_refresh_token( RefreshToken
                                                    , RefreshCtx
                                                    , Ctx1 ),
+    {ok, Ctx2}   =
+        case DeviceId of
+            undefined -> ?BACKEND:associate_refresh_token(RefreshToken, RefreshCtx, Ctx1);
+            _         -> ?BACKEND:associate_refresh_token(RefreshToken, RefreshCtx, DeviceId, Ctx1)
+        end,
     {ok, {Ctx2, oauth2_response:new( AccessToken
                                    , TTL
                                    , Owner
@@ -365,11 +374,12 @@ verify_access_code(AccessCode, Client, Ctx0) ->
                             -> {ok, {appctx(), response()}} | {error, error()}.
 refresh_access_token(Client, RefreshToken, Scope, Ctx0) ->
     case verify_refresh_token_basic(Client, RefreshToken, Scope, Ctx0) of
-      {ok, {Ctx1, ClientId, ResOwner, VerifiedScope, TTL, _DeviceId}} ->
-          issue_token(#a{ client   = ClientId
-                        , resowner = ResOwner
-                        , scope    = VerifiedScope
-                        , ttl      = TTL
+      {ok, {Ctx1, ClientId, ResOwner, VerifiedScope, TTL, DeviceId}} ->
+          issue_token(#a{ client    = ClientId
+                        , resowner  = ResOwner
+                        , scope     = VerifiedScope
+                        , ttl       = TTL
+                        , device_id = DeviceId
                         }, Ctx1);
       {error, _} = E -> E
     end.
@@ -479,7 +489,7 @@ verify_refresh_token_basic(Client, RefreshToken, Scope, Ctx0) ->
                                 {ok, {Ctx3, VerifiedScope}} ->
                                     {ok, ClientId} = get(GrantCtx, <<"client">>),
                                     {ok, ResOwner} = get(GrantCtx, <<"resource_owner">>),
-                                    {ok, DeviceId} = get(GrantCtx, <<"device_id">>),
+                                    DeviceId       = get(GrantCtx, <<"device_id">>, undefined),
                                     TTL            = oauth2_config:expiry_time(
                                                        password_credentials),
                                     {ok, { Ctx3, ClientId, ResOwner
@@ -521,6 +531,12 @@ get(O, K)  ->
     case lists:keyfind(K, 1, O) of
         {K, V} -> {ok, V};
         false  -> {error, notfound}
+    end.
+
+get(O, K, D) ->
+    case get(O, K) of
+        {ok, V}           -> V;
+        {error, notfound} -> D
     end.
 
 get_(O, K) ->

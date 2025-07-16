@@ -20,7 +20,7 @@
 {application, oauth2,
  [
   {description, "Erlang OAuth 2.0 implementation"},
-  {vsn, "0.7.0"},
+  {vsn, git},
   {registered, []},
   {applications, [
                   kernel,

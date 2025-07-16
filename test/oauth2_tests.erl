@@ -400,7 +400,7 @@ verify_refresh_token_test_() ->
 start() ->
     application:set_env(oauth2, backend, oauth2_mock_backend),
     application:set_env(oauth2, expiry_time, 3600),
-    oauth2_mock_backend:start(),
+    _ = oauth2_mock_backend:start(),
     ok.
 
 stop(_State) ->

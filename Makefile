@@ -1,33 +1,20 @@
-PROJECT = oauth2
-DIALYZER = dialyzer
-REBAR = ./rebar
+.PHONY: ci clean test eunit dialyze xref
 
-.PHONY: all deps compile clean test ct build-plt dialyze
+ci: clean xref dialyze test
 
-all: deps compile
-
-deps:
-	$(REBAR) get-deps
-
-compile:
-	$(REBAR) compile
+test: clean eunit
 
 clean:
-	$(REBAR) clean
+	rebar3 clean
 	rm -f test/*.beam
 	rm -f erl_crash.dump
 
-test: ct dialyze doc
+eunit:
+	rebar3 eunit
 
-test-build:
-	$(REBAR) compile
+dialyze:
+	rebar3 dialyzer
 
-ct: clean deps test-build
-	$(REBAR) eunit skip_deps=true
+xref:
+	rebar3 xref
 
-build-plt:
-	$(DIALYZER) --build_plt --output_plt .$(PROJECT).plt \
-		--apps erts kernel stdlib sasl inets crypto public_key ssl
-
-dialyze: clean deps test-build
-	$(DIALYZER) --plt .$(PROJECT).plt ebin
