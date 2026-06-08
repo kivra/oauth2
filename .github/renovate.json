@@ -1,6 +1,9 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>kivra/platform-ci//renovate/platform.json5#renovate/v1.0.0"],
+  "extends": [
+    "config:best-practices",
+    ":disableDigestUpdates"
+  ],
   "customManagers": [
     {
       "description": "Match Hex.pm-based dependencies in rebar.config",
