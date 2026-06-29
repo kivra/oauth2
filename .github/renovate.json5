@@ -1,0 +1,101 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: [
+    ":dependencyDashboard",
+    "replacements:all",
+    "workarounds:all",
+    "helpers:renovateChangelog",
+    "docker:pinDigests",
+    "helpers:pinGitHubActionDigests",
+    ":pinDevDependencies",
+    ":configMigration",
+  ],
+
+  // Global options - scheduling
+  timezone: "Europe/Stockholm",
+  minimumReleaseAge: "7 days", // This is the default, but exceptions apply, per this file
+  schedule: ["* 10-15 * * 1-5"], // This controls PR creation, auto-merge, ...
+
+  // Global options - pull requests
+  commitMessageTopic: "{{depName}}",
+  semanticCommits: "enabled",
+  semanticCommitType: "fix",
+  automerge: true,
+  labels: ["renovate"],
+
+  // Global options - lock files
+  lockFileMaintenance: {
+    // Benefit from changes to e.g. flake.nix
+    enabled: true,
+  },
+
+  // Standard managers
+  "renovate-config": {
+    enabled: false,
+  },
+  "git-submodules": {
+    // While this is beta we need to opt-in.
+    enabled: true,
+  },
+
+  // Security
+  vulnerabilityAlerts: {
+    labels: ["security"],
+    minimumReleaseAge: null,
+  },
+
+  // Exceptional package rules
+  packageRules: [
+    {
+      description: "Update Kivra-internal packages as instantly as possible",
+      matchPackageNames: ["/^kivra\\/.*$/"],
+      minimumReleaseAge: null,
+    },
+    {
+      description: "Always auto-merge non-major updates",
+      matchUpdateTypes: ["minor", "patch"],
+      automergeStrategy: "squash",
+    },
+    {
+      description: "Never auto-merge major updates",
+      matchUpdateTypes: ["major"],
+      automerge: false,
+    },
+    {
+      // This is required because pre v1 we have no guarantees on breakage
+      description: "Never auto-merge pre-v1 updates",
+      matchCurrentVersion: "/^v?0/",
+      automerge: false,
+    },
+  ],
+
+  // Non-standard managers
+  customManagers: [
+    {
+      description: "Match Hex.pm-based dependencies in rebar.config",
+      customType: "regex",
+      managerFilePatterns: [
+        "/rebar.config/",
+      ],
+      datasourceTemplate: "hex",
+      matchStrings: [
+        "\\n?\\s*,?\\s*\\[?\\s*\\{\\s*'?(?<depName>[a-z][a-z0-9_]*)'?\\s*,\\s*\"(?<currentValue>v?\\d+\\.\\d+(\\.\\d+)?)\"",
+      ],
+      versioningTemplate: "semver",
+      extractVersionTemplate: "^(==)?\\s*(?<version>.*$)",
+    },
+    {
+      description: "Match GitHub-based dependencies in rebar.config",
+      customType: "regex",
+      managerFilePatterns: [
+        "/rebar.config/",
+      ],
+      datasourceTemplate: "github-tags",
+      matchStrings: [
+        "\\{\\s*git(_subdir)?\\s*,\\s*\"https://github\\.com/(?<org>[^\\/]+)\\/(?<depName>[^.]*)\\.git\"\\s*,\\s*\\{\\s*tag\\s*,\\s*\"(?<prefix>.+/v)?(?<currentValue>[^\"]*)\"",
+      ],
+      depNameTemplate: "{{{org}}}/{{{depName}}}{{#if prefix}}/{{{replace '/v$' '' prefix}}}{{/if}}",
+      extractVersionTemplate: "^{{{prefix}}}(?<version>.*$)",
+    }
+  ]
+}
