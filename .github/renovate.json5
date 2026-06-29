@@ -68,6 +68,8 @@
       automerge: false,
     },
   ],
+
+  // Non-standard managers
   customManagers: [
     {
       description: "Match Hex.pm-based dependencies in rebar.config",
