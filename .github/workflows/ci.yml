@@ -1,5 +1,5 @@
 ---
-name: ci
+name: Continuous Integration
 permissions:
   contents: write
 
@@ -10,6 +10,10 @@ on:
   push:
     branches:
       - master
+  # for merge queues
+  merge_group:
+    types:
+      - checks_requested
 
 concurrency:
   group: ${{ (github.ref != 'refs/heads/master') && format('{0}-{1}', github.ref, github.workflow) || github.run_id }}
