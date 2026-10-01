@@ -72,30 +72,37 @@
   // Non-standard managers
   customManagers: [
     {
-      description: "Match Hex.pm-based dependencies in rebar.config",
+      description: 'rebar.config: {<dep>,"x.y.z"}, {<app>,"x.y.z",{pkg,<hex_name>}}',
       customType: "regex",
-      managerFilePatterns: [
-        "/rebar.config/",
-      ],
+      managerFilePatterns: ["/(^|/)rebar\\.config$/"],
       datasourceTemplate: "hex",
-      matchStrings: [
-        "\\n?\\s*,?\\s*\\[?\\s*\\{\\s*'?(?<depName>[a-z][a-z0-9_]*)'?\\s*,\\s*\"(?<currentValue>v?\\d+\\.\\d+(\\.\\d+)?)\"",
-      ],
       versioningTemplate: "semver",
-      extractVersionTemplate: "^(==)?\\s*(?<version>.*$)",
+      matchStrings: [
+        "\\n\\s*,?\\s*\\[?\\s*\\{\\s*'?(?<depName>[a-z][a-z0-9_]*)'?\\s*,\\s*\"v?(?<currentValue>\\d+\\.\\d+(\\.\\d+)?)\"\\s*[^,\\s]",
+        "\\n\\s*,?\\s*\\[?\\s*\\{\\s*'?[a-z][a-z0-9_]*'?\\s*,\\s*\"v?(?<currentValue>\\d+\\.\\d+(\\.\\d+)?)\"\\s*,\\s*\\{\\s*pkg\\s*,\\s*'?(?<depName>[a-z][a-z0-9_]*)'?\\s*\\}",
+      ],
     },
     {
-      description: "Match GitHub-based dependencies in rebar.config",
+      description: "rebar.config: GitHub dependencies",
       customType: "regex",
-      managerFilePatterns: [
-        "/rebar.config/",
-      ],
+      managerFilePatterns: ["/(^|/)rebar\\.config$/"],
       datasourceTemplate: "github-tags",
       matchStrings: [
-        "\\{\\s*git(_subdir)?\\s*,\\s*\"https://github\\.com/(?<org>[^\\/]+)\\/(?<depName>[^.]*)\\.git\"\\s*,\\s*\\{\\s*tag\\s*,\\s*\"(?<prefix>.+/v)?(?<currentValue>[^\"]*)\"",
+        '\\{\\s*git(_subdir)?\\s*,\\s*"(https://github\\.com/|git@github\\.com:)(?<org>[^/"]+)/(?<repo>[^"]+?)(\\.git)?"\\s*,\\s*\\{\\s*tag\\s*,\\s*"(?<prefix>.+/)?(?<currentValue>v?\\d+\\.\\d+(\\.\\d+)?)"',
       ],
-      depNameTemplate: "{{{org}}}/{{{depName}}}{{#if prefix}}/{{{replace '/v$' '' prefix}}}{{/if}}",
+      depNameTemplate: "{{{org}}}/{{{repo}}}{{#if prefix}}/{{{replace '/$' '' prefix}}}{{/if}}",
+      packageNameTemplate: "{{{org}}}/{{{repo}}}",
       extractVersionTemplate: "^{{{prefix}}}(?<version>.*$)",
-    }
-  ]
+    },
+    {
+      description: "mix.exs: GitHub dependencies",
+      customType: "regex",
+      managerFilePatterns: ["/(^|/)mix\\.exs$/"],
+      datasourceTemplate: "github-tags",
+      matchStrings: [
+        '\\{\\s*:(?<depName>[a-z][a-zA-Z0-9_]*)\\s*,\\s*git:\\s*"git@github\\.com:(?<packageName>[^/"]+/[^"]+?)(\\.git)?"\\s*,\\s*tag:\\s*"(?<prefix>.+/)?(?<currentValue>v?\\d+\\.\\d+(\\.\\d+)?)"',
+      ],
+      extractVersionTemplate: "^{{{prefix}}}(?<version>.+$)",
+    },
+  ],
 }
