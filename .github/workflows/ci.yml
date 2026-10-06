@@ -29,12 +29,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
         with:
           otp-version: 29.1.1
-          rebar3-version: 3.27.1
+          rebar3-version: '3.27.1'
 
       - run: |
           # Since we can't force CI to run after pushing rebar.lock
@@ -80,7 +79,6 @@ jobs:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         fetch-depth: 0
-        token: ${{secrets.GITHUB_TOKEN}}
 
     - name: Bump version and push tag
       id: tag-version
@@ -91,10 +89,8 @@ jobs:
         release_branches: ${{ github.event.repository.default_branch }}
 
     - name: Create a GitHub release
-      run: |
-        if ! command -v gh >/dev/null 2>&1; then
-          curl -sS https://webi.sh/gh | sh
-        fi
-        gh release create ${{ steps.tag-version.outputs.new_tag }} --generate-notes --latest
+      if: steps.tag-version.outputs.new_tag != ''
+      run: gh release create "${NEW_TAG}" --generate-notes --latest
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        NEW_TAG: ${{ steps.tag-version.outputs.new_tag }}
