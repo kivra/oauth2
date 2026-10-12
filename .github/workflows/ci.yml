@@ -90,7 +90,7 @@ jobs:
 
     - name: Create a GitHub release
       if: steps.tag-version.outputs.new_tag != ''
-      run: gh release create "${NEW_TAG}" --generate-notes --latest
+      run: gh release create "${NEW_TAG}" --generate-notes --latest=false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         NEW_TAG: ${{ steps.tag-version.outputs.new_tag }}
