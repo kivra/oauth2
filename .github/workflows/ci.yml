@@ -23,7 +23,7 @@ jobs:
   ci:
     if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
     name: ci
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -74,7 +74,7 @@ jobs:
       github.event_name == 'push' &&
       github.ref_name == github.event.repository.default_branch &&
       !startsWith(github.event.head_commit.message, 'no-release')
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
