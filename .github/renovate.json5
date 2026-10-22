@@ -67,6 +67,14 @@
       matchCurrentVersion: "/^v?0/",
       automerge: false,
     },
+    {
+      description: "rebar.config: rebar.lock is refreshed outside Renovate, which then stops auto-merging",
+      matchManagers: ["custom.regex"],
+      matchFileNames: ["**/rebar.config"],
+      prBodyNotes: [
+        "> [!NOTE]\n> This update may also change a lock file. If it does, Renovate can't auto-merge it. Once CI finishes, check Renovate's latest comment and do what it says: approve, or let it auto-merge.",
+      ],
+    },
   ],
 
   // Non-standard managers
