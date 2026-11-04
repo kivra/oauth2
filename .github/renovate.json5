@@ -21,7 +21,7 @@
   semanticCommits: "enabled",
   semanticCommitType: "fix",
   automerge: true,
-  labels: ["renovate"],
+  labels: ["renovate", "renovate:automerge"],
 
   // Global options - lock files
   lockFileMaintenance: {
@@ -40,7 +40,7 @@
 
   // Security
   vulnerabilityAlerts: {
-    labels: ["security"],
+    addLabels: ["security"],
     minimumReleaseAge: null,
   },
 
@@ -60,12 +60,16 @@
       description: "Never auto-merge major updates",
       matchUpdateTypes: ["major"],
       automerge: false,
+      labels: ["renovate", "renovate:attention"],
+      addLabels: ["major"],
     },
     {
       // This is required because pre v1 we have no guarantees on breakage
       description: "Never auto-merge pre-v1 updates",
       matchCurrentVersion: "/^v?0/",
       automerge: false,
+      labels: ["renovate", "renovate:attention"],
+      addLabels: ["major"],
     },
     {
       description: "rebar.config: rebar.lock is refreshed outside Renovate, which then stops auto-merging",
