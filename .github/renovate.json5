@@ -22,6 +22,7 @@
   semanticCommitType: "fix",
   automerge: true,
   labels: ["renovate", "renovate:automerge"],
+  gitIgnoredAuthors: ["kivra-platform-ci@users.noreply.github.com"],
 
   // Global options - lock files
   lockFileMaintenance: {
@@ -76,7 +77,7 @@
       matchManagers: ["custom.regex"],
       matchFileNames: ["**/rebar.config"],
       prBodyNotes: [
-        "> [!NOTE]\n> This update may also change a lock file. If it does, Renovate can't auto-merge it. Once CI finishes, check Renovate's latest comment and do what it says: approve, or let it auto-merge.",
+        "> [!NOTE]\n> This update may also change a lock file. If it does, Renovate may not be able to auto-merge it. Once CI finishes, check Renovate's latest comment and do what it says: approve, or let it auto-merge.",
       ],
     },
   ],
