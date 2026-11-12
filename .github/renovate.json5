@@ -23,6 +23,8 @@
   automerge: true,
   labels: ["renovate", "renovate:automerge"],
   gitIgnoredAuthors: ["kivra-platform-ci@users.noreply.github.com"],
+  // Rebasing would force-push away commits from gitIgnoredAuthors, looping with them
+  rebaseWhen: "never",
 
   // Global options - lock files
   lockFileMaintenance: {
